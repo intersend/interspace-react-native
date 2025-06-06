@@ -101,12 +101,15 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     setIsLoading(true);
     
     try {
+      const stored = await hasStoredPasskey(client);
       const config: WalletConnectConfig = {
         strategy: 'passkey',
-        // TODO: Add passkey configuration when supported
       };
-      
+
       await login(config);
+      if (!stored) {
+        console.log('🆕 Passkey setup completed');
+      }
       onAuthSuccess?.();
     } catch (error: any) {
       Alert.alert('Authentication Failed', error.message || 'Unable to authenticate with passkey');

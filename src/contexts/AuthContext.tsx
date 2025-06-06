@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useConnect, useActiveWallet, useDisconnect, useActiveAccount } from 'thirdweb/react';
 import { inAppWallet, createWallet } from 'thirdweb/wallets';
-import { preAuthenticate } from 'thirdweb/wallets/in-app';
+import { preAuthenticate, hasStoredPasskey } from 'thirdweb/wallets/in-app';
 import { createAuth } from 'thirdweb/auth';
 import { privateKeyToAccount } from 'thirdweb/wallets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -460,6 +460,14 @@ Issued At: ${payload.issued_at}`;
             strategy: 'phone',
             phoneNumber: config.phoneNumber,
             verificationCode: config.verificationCode,
+          });
+        } else if (config.strategy === 'passkey') {
+          console.log('🔄 Connecting with passkey strategy...');
+          const stored = await hasStoredPasskey(client);
+          await inApp.connect({
+            client,
+            strategy: 'passkey',
+            type: stored ? 'sign-in' : 'sign-up',
           });
         } else {
           console.log(`🔄 Connecting with ${config.strategy} strategy...`);
