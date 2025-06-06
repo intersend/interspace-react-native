@@ -25,9 +25,9 @@ Interspace is a wallet wrapper that allows users to:
 - Link existing wallets (MetaMask, Coinbase, etc.)
 - Grant ERC-20 token allowances for seamless transactions
 
-### 2. Apps
-- iPhone-style home screen with bookmarked Web3 apps
-- Drag-and-drop app organization with folders
+- iOS inspired home screen with dynamic app icons and folders
+- Horizontal paging with page dots just like iOS
+- Drag-and-drop organization and folder creation
 - Built-in browser with wallet injection
 - Custom transaction confirmation UI
 
