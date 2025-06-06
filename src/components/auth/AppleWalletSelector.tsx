@@ -15,6 +15,8 @@ import {
   StatusBar,
   ScrollView,
   Linking,
+  Dimensions,
+  PanResponder,
 } from 'react-native';
 import AppleBottomTray from '../ui/AppleBottomTray';
 import { Apple } from '../../../constants/AppleDesign';
