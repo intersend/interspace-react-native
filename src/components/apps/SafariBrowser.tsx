@@ -22,13 +22,9 @@ import Animated, {
   withTiming,
   interpolate,
   runOnJS,
-  useAnimatedGestureHandler,
-  withSequence,
 } from 'react-native-reanimated';
-import {
-  PanGestureHandler,
-  State,
-} from 'react-native-gesture-handler';
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Apple } from '@/constants/AppleDesign';
@@ -97,12 +93,8 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
     };
   });
 
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: () => {
-      'worklet';
-    },
-    onActive: (event) => {
-      'worklet';
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
       if (event.translationY > 0) {
         gestureTranslateY.value = event.translationY;
         scale.value = interpolate(
@@ -116,9 +108,8 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
           [0, 20]
         );
       }
-    },
-    onEnd: (event) => {
-      'worklet';
+    })
+    .onEnd((event) => {
       if (event.translationY > SWIPE_THRESHOLD) {
         translateY.value = withTiming(height, { duration: 300 });
         runOnJS(onClose)();
@@ -137,8 +128,7 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
           stiffness: 400,
         });
       }
-    },
-  });
+    });
 
   const handleNavigate = () => {
     let finalUrl = inputUrl;
@@ -179,7 +169,7 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFillObject} />
         </Animated.View>
         
-        <PanGestureHandler onGestureEvent={gestureHandler}>
+        <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.browserContainer, animatedStyle]}>
             <SafeAreaView style={styles.safeArea}>
               {/* Drag indicator */}
@@ -304,7 +294,7 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
             </KeyboardAvoidingView>
           </SafeAreaView>
           </Animated.View>
-        </PanGestureHandler>
+        </GestureDetector>
       </View>
     </Modal>
   );
