@@ -202,7 +202,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         authStrategy: config.strategy,
         walletAddress,
         email: config.email,
-        phoneNumber: config.phoneNumber,
         verificationCode: config.verificationCode,
         socialProvider: config.socialProvider,
         socialProfile: config.socialProfile,
@@ -431,7 +430,21 @@ Issued At: ${payload.issued_at}`;
         const inAppOptions: any = {};
         
         // For social logins, add passkeyDomain for React Native
-        if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+        if ([
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy)) {
           inAppOptions.auth = {
             options: [config.strategy],
             passkeyDomain: "interspace.app", // Required for React Native
@@ -449,16 +462,6 @@ Issued At: ${payload.issued_at}`;
             client,
             strategy: 'email',
             email: config.email,
-            verificationCode: config.verificationCode,
-          });
-        } else if (config.strategy === 'phone') {
-          if (!config.phoneNumber || !config.verificationCode) {
-            throw new Error('Phone number and verification code required');
-          }
-          await inApp.connect({
-            client,
-            strategy: 'phone',
-            phoneNumber: config.phoneNumber,
             verificationCode: config.verificationCode,
           });
         } else if (config.strategy === 'passkey') {
@@ -496,7 +499,21 @@ Issued At: ${payload.issued_at}`;
 
       // Extract social profile for social logins
       let socialProfile = config.socialProfile;
-      if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+      if ([
+        'google',
+        'apple',
+        'facebook',
+        'x',
+        'discord',
+        'telegram',
+        'twitch',
+        'farcaster',
+        'github',
+        'line',
+        'coinbase',
+        'steam',
+        'backend',
+      ].includes(config.strategy)) {
         try {
           // Try multiple methods to get user details
           const userDetails = (wallet as any).getUserDetails?.() || 
@@ -538,7 +555,24 @@ Issued At: ${payload.issued_at}`;
       }
 
       // Always pass socialProfile for social strategies
-      if (socialProfile || ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+      if (
+        socialProfile ||
+        [
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy)
+      ) {
         config.socialProfile = socialProfile || {
           id: account.address,
           name: config.strategy,
@@ -597,7 +631,21 @@ Issued At: ${payload.issued_at}`;
         activeProfile = defaultProfile;
         
         // For social logins, use the social wallet as the profile wallet
-        if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy) && wallet) {
+        if ([
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy) && wallet) {
           console.log(`📱 Using ${config.strategy} wallet as profile session wallet`);
           await createProfileWallet(defaultProfile, wallet, config.strategy);
         } else {
@@ -705,7 +753,25 @@ Issued At: ${payload.issued_at}`;
       let walletAddress;
       let walletStrategy = strategy || 'guest';
       
-      if (existingWallet && strategy && ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(strategy)) {
+      if (
+        existingWallet &&
+        strategy &&
+        [
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(strategy)
+      ) {
         // Use the existing social wallet as the profile wallet
         console.log(`📱 Using existing ${strategy} wallet for profile`);
         profileWallet = existingWallet;
@@ -931,25 +997,17 @@ Issued At: ${payload.issued_at}`;
   };
 
   const sendVerificationCode = async (
-    strategy: 'email' | 'phone',
+    strategy: 'email',
     contact: string
   ): Promise<void> => {
     try {
       setError(null);
       
-      if (strategy === 'email') {
-        await preAuthenticate({
-          client,
-          strategy: 'email',
-          email: contact,
-        });
-      } else {
-        await preAuthenticate({
-          client,
-          strategy: 'phone',
-          phoneNumber: contact,
-        });
-      }
+      await preAuthenticate({
+        client,
+        strategy: 'email',
+        email: contact,
+      });
       
       console.log(`✅ Verification code sent to ${contact}`);
     } catch (error: any) {

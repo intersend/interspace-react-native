@@ -22,7 +22,20 @@ interface SocialProvider {
   icon: string;
   backgroundColor: string;
   textColor: string;
-  strategy: 'google' | 'apple' | 'facebook' | 'discord';
+  strategy:
+    | 'google'
+    | 'apple'
+    | 'facebook'
+    | 'x'
+    | 'discord'
+    | 'telegram'
+    | 'twitch'
+    | 'farcaster'
+    | 'github'
+    | 'line'
+    | 'coinbase'
+    | 'steam'
+    | 'backend';
 }
 
 const SOCIAL_PROVIDERS: SocialProvider[] = [
@@ -57,6 +70,78 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
     backgroundColor: Colors.dark.socialDiscord,
     textColor: Colors.dark.textInverted,
     strategy: 'discord',
+  },
+  {
+    id: 'x',
+    name: 'Continue with X',
+    icon: '𝕏',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'x',
+  },
+  {
+    id: 'telegram',
+    name: 'Continue with Telegram',
+    icon: '✈️',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'telegram',
+  },
+  {
+    id: 'twitch',
+    name: 'Continue with Twitch',
+    icon: '📺',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'twitch',
+  },
+  {
+    id: 'farcaster',
+    name: 'Continue with Farcaster',
+    icon: '📡',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'farcaster',
+  },
+  {
+    id: 'github',
+    name: 'Continue with GitHub',
+    icon: '🐱',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'github',
+  },
+  {
+    id: 'line',
+    name: 'Continue with Line',
+    icon: '💚',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'line',
+  },
+  {
+    id: 'coinbase',
+    name: 'Continue with Coinbase',
+    icon: '💙',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'coinbase',
+  },
+  {
+    id: 'steam',
+    name: 'Continue with Steam',
+    icon: '🎮',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'steam',
+  },
+  {
+    id: 'backend',
+    name: 'Continue with Backend',
+    icon: '🔑',
+    backgroundColor: Colors.dark.surface,
+    textColor: Colors.dark.text,
+    strategy: 'backend',
   },
 ];
 
