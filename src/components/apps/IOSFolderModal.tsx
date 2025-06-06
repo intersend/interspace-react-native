@@ -24,8 +24,8 @@ import { IOSAppIcon } from './IOSAppIcon';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
-const FOLDER_WIDTH = width - 40;
-const FOLDER_HEIGHT = 340;
+const FOLDER_WIDTH = width - 30;
+const FOLDER_HEIGHT = 380;
 const ICONS_PER_ROW = 3;
 const ICON_SIZE = 74;
 const ICON_SPACING = 25;

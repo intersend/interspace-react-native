@@ -22,8 +22,6 @@ import { IOSAppIcon } from './IOSAppIcon';
 import { IOSFolderIcon } from './IOSFolderIcon';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 interface DraggableAppIconProps {
   item: any; // App or Folder
   isFolder: boolean;
@@ -160,39 +158,42 @@ export function DraggableAppIcon({
         ref={panRef}
         onGestureEvent={panHandler}
         simultaneousHandlers={longPressRef}
+        waitFor={longPressRef}
         enabled={isEditMode}
       >
-        <Animated.View style={[styles.container, animatedStyle]}>
-          {isDragging ? (
-            <View style={styles.placeholder} />
-          ) : (
-            <>
-              {isFolder ? (
-                <IOSFolderIcon
-                  id={item.id}
-                  name={item.name}
-                  apps={item.apps}
-                  color={item.color}
-                  isEditMode={isEditMode}
-                  onPress={onPress}
-                  onLongPress={() => {}} // Handled by gesture
-                  onDelete={onDelete}
-                />
-              ) : (
-                <IOSAppIcon
-                  id={item.id}
-                  name={item.name}
-                  url={item.url}
-                  iconUrl={item.iconUrl}
-                  isEditMode={isEditMode}
-                  onPress={onPress}
-                  onLongPress={() => {}} // Handled by gesture
-                  onDelete={onDelete}
-                />
-              )}
-            </>
-          )}
-        </Animated.View>
+        <Pressable onPress={onPress} disabled={isEditMode}>
+          <Animated.View style={[styles.container, animatedStyle]}>
+            {isDragging ? (
+              <View style={styles.placeholder} />
+            ) : (
+              <>
+                {isFolder ? (
+                  <IOSFolderIcon
+                    id={item.id}
+                    name={item.name}
+                    apps={item.apps}
+                    color={item.color}
+                    isEditMode={isEditMode}
+                    onPress={() => {}}
+                    onLongPress={() => {}}
+                    onDelete={onDelete}
+                  />
+                ) : (
+                  <IOSAppIcon
+                    id={item.id}
+                    name={item.name}
+                    url={item.url}
+                    iconUrl={item.iconUrl}
+                    isEditMode={isEditMode}
+                    onPress={() => {}}
+                    onLongPress={() => {}}
+                    onDelete={onDelete}
+                  />
+                )}
+              </>
+            )}
+          </Animated.View>
+        </Pressable>
       </PanGestureHandler>
     </LongPressGestureHandler>
   );
