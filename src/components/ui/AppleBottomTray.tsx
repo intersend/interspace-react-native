@@ -9,7 +9,8 @@ import {
   TouchableWithoutFeedback,
   Platform,
 } from 'react-native';
-import { Apple } from '../../constants/AppleDesign';
+import { Apple } from '../../../constants/AppleDesign';
+
 
 const { height } = Dimensions.get('window');
 const TRAY_HEIGHT = height * 0.5;

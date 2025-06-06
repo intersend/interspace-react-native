@@ -23,7 +23,6 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-} from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
