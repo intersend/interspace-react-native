@@ -140,7 +140,21 @@ export function ProfileWalletProvider({ children }: ProfileWalletProviderProps) 
       
       // For social wallets, we need to restore the existing connection
       // For guest wallets, we reconnect with guest strategy
-      if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(strategy)) {
+      if ([
+        'google',
+        'apple',
+        'facebook',
+        'x',
+        'discord',
+        'telegram',
+        'twitch',
+        'farcaster',
+        'github',
+        'line',
+        'coinbase',
+        'steam',
+        'backend',
+      ].includes(strategy)) {
         // Social wallets should auto-restore from storage
         await profileWallet.connect({
           client,
