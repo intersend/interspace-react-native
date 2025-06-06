@@ -28,7 +28,21 @@ export function useProfileSocialAccounts(profileId: string | undefined) {
       const { strategy } = JSON.parse(walletData);
       
       // If it's a social wallet, show that social account
-      if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(strategy)) {
+      if ([
+        'google',
+        'apple',
+        'facebook',
+        'x',
+        'discord',
+        'telegram',
+        'twitch',
+        'farcaster',
+        'github',
+        'line',
+        'coinbase',
+        'steam',
+        'backend',
+      ].includes(strategy)) {
         console.log(`📱 Profile uses ${strategy} wallet`);
         // For social wallets, the wallet itself IS the social account
         setSocialAccounts([{
