@@ -11,7 +11,6 @@ import {
   Alert,
   Dimensions,
   Image,
-  Modal,
 } from 'react-native';
 import { Apple } from '../../../constants/AppleDesign';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,6 +20,8 @@ import * as Haptics from 'expo-haptics';
 import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
 import { client } from '../../../constants/thirdweb';
 import AppleWalletSelector from './AppleWalletSelector';
+import AppleContactAuthModal from './AppleContactAuthModal';
+import AppleBottomTray from '../ui/AppleBottomTray';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   const [hasPasskey, setHasPasskey] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Animation values
@@ -227,14 +229,8 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   );
 
   const renderMoreOptions = () => (
-    <Modal
-      visible={showMoreOptions}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowMoreOptions(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+    <AppleBottomTray visible={showMoreOptions} onClose={() => setShowMoreOptions(false)}>
+      <View style={styles.modalContent}>
           <View style={styles.modalHandle} />
           
           <View style={styles.modalHeader}>
@@ -252,24 +248,28 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
             {/* Social Options */}
             <View style={styles.optionGroup}>
               <Text style={styles.optionGroupTitle}>Social</Text>
-              
-              <OptionButton
-                icon="🔍"
-                title="Continue with Google"
-                onPress={() => handleSocialAuth('google')}
-              />
-              
-              <OptionButton
-                icon="📘"
-                title="Continue with Facebook"
-                onPress={() => handleSocialAuth('facebook')}
-              />
-              
-              <OptionButton
-                icon="🎮"
-                title="Continue with Discord"
-                onPress={() => handleSocialAuth('discord')}
-              />
+
+              {[
+                { icon: '🔍', title: 'Continue with Google', provider: 'google' },
+                { icon: '📘', title: 'Continue with Facebook', provider: 'facebook' },
+                { icon: '𝕏', title: 'Continue with X', provider: 'x' },
+                { icon: '✈️', title: 'Continue with Telegram', provider: 'telegram' },
+                { icon: '📺', title: 'Continue with Twitch', provider: 'twitch' },
+                { icon: '🎮', title: 'Continue with Discord', provider: 'discord' },
+                { icon: '📡', title: 'Continue with Farcaster', provider: 'farcaster' },
+                { icon: '🐱', title: 'Continue with GitHub', provider: 'github' },
+                { icon: '💚', title: 'Continue with Line', provider: 'line' },
+                { icon: '💙', title: 'Continue with Coinbase', provider: 'coinbase' },
+                { icon: '🎮', title: 'Continue with Steam', provider: 'steam' },
+                { icon: '🔑', title: 'Continue with Backend', provider: 'backend' },
+              ].map((opt) => (
+                <OptionButton
+                  key={opt.provider}
+                  icon={opt.icon}
+                  title={opt.title}
+                  onPress={() => handleSocialAuth(opt.provider)}
+                />
+              ))}
             </View>
 
             {/* Other Options */}
@@ -281,6 +281,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
                 title="Continue with Email"
                 onPress={() => handleEmailAuth()}
               />
+
               
               <OptionButton
                 icon="👤"
@@ -313,8 +314,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
             )}
           </ScrollView>
         </View>
-      </View>
-    </Modal>
+      </AppleBottomTray>
   );
 
   const handleSocialAuth = async (provider: string) => {
@@ -337,9 +337,8 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   };
 
   const handleEmailAuth = async () => {
-    // Navigate to email auth screen
     setShowMoreOptions(false);
-    Alert.alert('Coming Soon', 'Email authentication will be available soon');
+    setShowEmailModal(true);
   };
 
   const handleGuestAuth = async () => {
@@ -377,6 +376,13 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
       <AppleWalletSelector
         visible={showWalletSelector}
         onClose={() => setShowWalletSelector(false)}
+        onSuccess={onAuthSuccess}
+      />
+
+      {/* Email Authentication Modal */}
+      <AppleContactAuthModal
+        visible={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
         onSuccess={onAuthSuccess}
       />
 
@@ -583,12 +589,6 @@ const styles = StyleSheet.create({
   },
   legalLink: {
     color: Apple.Colors.systemBlue,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: Apple.Colors.systemBackground,

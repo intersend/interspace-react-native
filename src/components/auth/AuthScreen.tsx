@@ -21,7 +21,7 @@ import { useTestWallet } from '../../hooks/useTestWallet';
 import { testWalletDemo } from '../testing/TestWalletSystem';
 import FloatingTestWallet from '../testing/FloatingTestWallet';
 
-export type AuthMethod = 'select' | 'email' | 'phone' | 'social' | 'wallet' | 'guest';
+export type AuthMethod = 'select' | 'email' | 'social' | 'wallet' | 'guest';
 
 interface AuthScreenProps {
   onAuthSuccess?: () => void;
@@ -126,13 +126,6 @@ export default function AuthScreen({ onAuthSuccess, allowGuest = true }: AuthScr
         />
         
         <AuthMethodButton
-          title="Phone"
-          icon="📱"
-          description="Sign in with SMS verification"
-          onPress={() => setCurrentMethod('phone')}
-        />
-        
-        <AuthMethodButton
           title="Social"
           icon="🌐"
           description="Google, Apple, Facebook & more"
@@ -207,22 +200,6 @@ export default function AuthScreen({ onAuthSuccess, allowGuest = true }: AuthScr
             onBack={() => setCurrentMethod('select')}
             isLoading={isLoading}
           />
-        );
-      
-      case 'phone':
-        return (
-          <View style={styles.comingSoonContainer}>
-            <Text style={styles.comingSoonTitle}>Coming Soon</Text>
-            <Text style={styles.comingSoonText}>
-              Phone authentication will be available soon.
-            </Text>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => setCurrentMethod('select')}
-            >
-              <Text style={styles.backButtonText}>← Back to Options</Text>
-            </TouchableOpacity>
-          </View>
         );
       
       default:

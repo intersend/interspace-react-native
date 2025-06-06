@@ -4,18 +4,15 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  Pressable,
   ScrollView,
-  SafeAreaView,
   Dimensions,
-  Platform,
 } from 'react-native';
 
 import { Colors } from '../../../constants/Colors';
 import { useColorScheme } from '../../../hooks/useColorScheme';
+import AppleBottomTray from '../ui/AppleBottomTray';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = Dimensions.get('window');
 
 interface AddOption {
   id: string;
@@ -108,10 +105,6 @@ export const UniversalAddTray: React.FC<UniversalAddTrayProps> = ({
     },
   ];
 
-  const handleBackdropPress = () => {
-    onClose();
-  };
-
   const handleOptionPress = (option: AddOption) => {
     console.log('🎯 Tray option pressed:', option.title);
     // Don't close immediately - let the handler decide
@@ -128,29 +121,13 @@ export const UniversalAddTray: React.FC<UniversalAddTrayProps> = ({
   }, [visible, addGroups]);
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent={true}
-    >
-      <View style={styles.modalContainer}>
-        {/* Backdrop */}
-        <Pressable style={styles.backdrop} onPress={handleBackdropPress} />
-
-        {/* Tray Container */}
-        <View style={[
+    <AppleBottomTray visible={visible} onClose={onClose}>
+      <View
+        style={[
           styles.trayContainer,
           { backgroundColor: Colors[colorScheme ?? 'dark'].surface }
-        ]}>
-          {/* Handle Bar */}
-          <View style={styles.handleContainer}>
-            <View style={[
-              styles.handle,
-              { backgroundColor: Colors[colorScheme ?? 'dark'].tabIconDefault }
-            ]} />
-          </View>
+        ]}
+      >
 
           {/* Header */}
           <View style={styles.header}>
@@ -235,24 +212,11 @@ export const UniversalAddTray: React.FC<UniversalAddTrayProps> = ({
           </ScrollView>
         </View>
       </View>
-    </Modal>
+    </AppleBottomTray>
   );
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-
   trayContainer: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -267,17 +231,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 20,
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.3,
   },
   header: {
     flexDirection: 'row',

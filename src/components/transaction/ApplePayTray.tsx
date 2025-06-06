@@ -1,11 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Animated,
-  PanResponder,
-  Dimensions,
   TouchableOpacity,
   ActivityIndicator,
   Image,
@@ -19,10 +17,9 @@ import { LinkedAccount } from '../../types';
 import { orbyService } from '../../services/orby';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import AppleBottomTray from '../ui/AppleBottomTray';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const TRAY_HEIGHT = SCREEN_HEIGHT * 0.75;
-const SWIPE_THRESHOLD = 100;
+
 
 interface ApplePayTrayProps {
   visible: boolean;
@@ -48,8 +45,6 @@ export default function ApplePayTray({
   transactionType = 'send',
 }: ApplePayTrayProps) {
   const colorScheme = useColorScheme();
-  const translateY = useRef(new Animated.Value(TRAY_HEIGHT)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
   const [isFullyHidden, setIsFullyHidden] = React.useState(true);
   const [showRouting, setShowRouting] = React.useState(false);
   const routingHeightAnim = useRef(new Animated.Value(0)).current;
@@ -80,65 +75,7 @@ export default function ApplePayTray({
     setShowRouting(!showRouting);
   };
 
-  // Pan responder for swipe to dismiss
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) {
-          translateY.setValue(gesture.dy);
-        }
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > SWIPE_THRESHOLD) {
-          handleClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  useEffect(() => {
-    if (visible) {
-      setIsFullyHidden(false);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      // Animate tray slide up
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: 0,
-          damping: 25,
-          stiffness: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Animate tray slide down
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: TRAY_HEIGHT,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setIsFullyHidden(true);
-      });
-    }
-  }, [visible]);
+  // No-op effect: bottom tray handles animations
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -164,45 +101,19 @@ export default function ApplePayTray({
     }
   };
 
-  if (!visible && isFullyHidden) {
+  if (!visible) {
     return null;
   }
 
   return (
-    <>
-      {/* Background overlay */}
-      <Animated.View
-        style={[
-          styles.overlay,
-          {
-            opacity: overlayOpacity,
-          },
-        ]}
-        pointerEvents={visible ? 'auto' : 'none'}
+    <AppleBottomTray visible={visible} onClose={handleClose}>
+      <BlurView
+        intensity={100}
+        tint={colorScheme === 'dark' ? 'dark' : 'light'}
+        style={styles.blurContainer}
       >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-      </Animated.View>
-
-      {/* Transaction tray */}
-      <Animated.View
-        style={[
-          styles.tray,
-          {
-            transform: [{ translateY }],
-          },
-        ]}
-      >
-        <BlurView
-          intensity={100}
-          tint={colorScheme === 'dark' ? 'dark' : 'light'}
-          style={styles.blurContainer}
-        >
           {/* Handle bar */}
-          <View {...panResponder.panHandlers} style={styles.handleContainer}>
+          <View style={styles.handleContainer}>
             <View style={styles.handle} />
           </View>
 
@@ -426,23 +337,13 @@ export default function ApplePayTray({
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </BlurView>
-      </Animated.View>
-    </>
+      </BlurView>
+    </AppleBottomTray>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
   tray: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: TRAY_HEIGHT,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     overflow: 'hidden',

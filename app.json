@@ -12,14 +12,26 @@
 			"resizeMode": "contain",
 			"backgroundColor": "#000014"
 		},
-		"ios": {
-			"supportsTablet": true,
-			"bundleIdentifier": "com.interspace.app",
-			"associatedDomains": [
-				"webcredentials:interspace.app",
-				"applinks:interspace.app"
-			]
-		},
+                "ios": {
+                        "supportsTablet": true,
+                        "bundleIdentifier": "com.interspace.app",
+                        "associatedDomains": [
+                                "webcredentials:interspace.app",
+                                "applinks:interspace.app"
+                        ],
+                        "infoPlist": {
+                                "LSApplicationQueriesSchemes": [
+                                        "metamask",
+                                        "cbwallet",
+                                        "rainbow",
+                                        "trust",
+                                        "argent",
+                                        "safe",
+                                        "zerion",
+                                        "wc"
+                                ]
+                        }
+                },
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/images/adaptive-icon.png",
