@@ -98,7 +98,22 @@ export interface Token {
 
 export interface SocialAccount {
   id: string;
-  provider: 'farcaster' | 'telegram' | 'twitter' | 'discord' | 'google' | 'apple' | 'facebook' | 'email' | 'phone' | 'passkey' | 'line';
+  provider:
+    | 'farcaster'
+    | 'telegram'
+    | 'x'
+    | 'twitch'
+    | 'discord'
+    | 'github'
+    | 'google'
+    | 'apple'
+    | 'facebook'
+    | 'line'
+    | 'coinbase'
+    | 'steam'
+    | 'email'
+    | 'phone'
+    | 'passkey';
   username?: string;
   displayName?: string;
   avatarUrl?: string;
@@ -149,7 +164,25 @@ export interface TestWallet {
 }
 
 export interface WalletConnectConfig {
-  strategy: 'guest' | 'email' | 'phone' | 'google' | 'apple' | 'facebook' | 'discord' | 'telegram' | 'wallet' | 'passkey';
+  strategy:
+    | 'guest'
+    | 'email'
+    | 'phone'
+    | 'passkey'
+    | 'wallet'
+    | 'google'
+    | 'apple'
+    | 'facebook'
+    | 'x'
+    | 'discord'
+    | 'telegram'
+    | 'twitch'
+    | 'farcaster'
+    | 'github'
+    | 'line'
+    | 'coinbase'
+    | 'steam'
+    | 'backend';
   email?: string;
   phoneNumber?: string;
   verificationCode?: string;

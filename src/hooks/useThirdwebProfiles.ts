@@ -329,10 +329,16 @@ export function useThirdwebProfiles(externalAddress?: string): UseThirdwebProfil
       'google',
       'apple', 
       'facebook',
+      'x',
       'discord',
       'telegram',
+      'twitch',
       'farcaster',
+      'github',
       'line',
+      'coinbase',
+      'steam',
+      'backend',
       
       // Communication strategies
       'email',

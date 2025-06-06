@@ -431,7 +431,21 @@ Issued At: ${payload.issued_at}`;
         const inAppOptions: any = {};
         
         // For social logins, add passkeyDomain for React Native
-        if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+        if ([
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy)) {
           inAppOptions.auth = {
             options: [config.strategy],
             passkeyDomain: "interspace.app", // Required for React Native
@@ -496,7 +510,21 @@ Issued At: ${payload.issued_at}`;
 
       // Extract social profile for social logins
       let socialProfile = config.socialProfile;
-      if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+      if ([
+        'google',
+        'apple',
+        'facebook',
+        'x',
+        'discord',
+        'telegram',
+        'twitch',
+        'farcaster',
+        'github',
+        'line',
+        'coinbase',
+        'steam',
+        'backend',
+      ].includes(config.strategy)) {
         try {
           // Try multiple methods to get user details
           const userDetails = (wallet as any).getUserDetails?.() || 
@@ -538,7 +566,24 @@ Issued At: ${payload.issued_at}`;
       }
 
       // Always pass socialProfile for social strategies
-      if (socialProfile || ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+      if (
+        socialProfile ||
+        [
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy)
+      ) {
         config.socialProfile = socialProfile || {
           id: account.address,
           name: config.strategy,
@@ -597,7 +642,21 @@ Issued At: ${payload.issued_at}`;
         activeProfile = defaultProfile;
         
         // For social logins, use the social wallet as the profile wallet
-        if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy) && wallet) {
+        if ([
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(config.strategy) && wallet) {
           console.log(`📱 Using ${config.strategy} wallet as profile session wallet`);
           await createProfileWallet(defaultProfile, wallet, config.strategy);
         } else {
@@ -705,7 +764,25 @@ Issued At: ${payload.issued_at}`;
       let walletAddress;
       let walletStrategy = strategy || 'guest';
       
-      if (existingWallet && strategy && ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(strategy)) {
+      if (
+        existingWallet &&
+        strategy &&
+        [
+          'google',
+          'apple',
+          'facebook',
+          'x',
+          'discord',
+          'telegram',
+          'twitch',
+          'farcaster',
+          'github',
+          'line',
+          'coinbase',
+          'steam',
+          'backend',
+        ].includes(strategy)
+      ) {
         // Use the existing social wallet as the profile wallet
         console.log(`📱 Using existing ${strategy} wallet for profile`);
         profileWallet = existingWallet;

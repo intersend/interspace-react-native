@@ -252,24 +252,28 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
             {/* Social Options */}
             <View style={styles.optionGroup}>
               <Text style={styles.optionGroupTitle}>Social</Text>
-              
-              <OptionButton
-                icon="🔍"
-                title="Continue with Google"
-                onPress={() => handleSocialAuth('google')}
-              />
-              
-              <OptionButton
-                icon="📘"
-                title="Continue with Facebook"
-                onPress={() => handleSocialAuth('facebook')}
-              />
-              
-              <OptionButton
-                icon="🎮"
-                title="Continue with Discord"
-                onPress={() => handleSocialAuth('discord')}
-              />
+
+              {[
+                { icon: '🔍', title: 'Continue with Google', provider: 'google' },
+                { icon: '📘', title: 'Continue with Facebook', provider: 'facebook' },
+                { icon: '𝕏', title: 'Continue with X', provider: 'x' },
+                { icon: '✈️', title: 'Continue with Telegram', provider: 'telegram' },
+                { icon: '📺', title: 'Continue with Twitch', provider: 'twitch' },
+                { icon: '🎮', title: 'Continue with Discord', provider: 'discord' },
+                { icon: '📡', title: 'Continue with Farcaster', provider: 'farcaster' },
+                { icon: '🐱', title: 'Continue with GitHub', provider: 'github' },
+                { icon: '💚', title: 'Continue with Line', provider: 'line' },
+                { icon: '💙', title: 'Continue with Coinbase', provider: 'coinbase' },
+                { icon: '🎮', title: 'Continue with Steam', provider: 'steam' },
+                { icon: '🔑', title: 'Continue with Backend', provider: 'backend' },
+              ].map((opt) => (
+                <OptionButton
+                  key={opt.provider}
+                  icon={opt.icon}
+                  title={opt.title}
+                  onPress={() => handleSocialAuth(opt.provider)}
+                />
+              ))}
             </View>
 
             {/* Other Options */}
@@ -280,6 +284,12 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
                 icon="📧"
                 title="Continue with Email"
                 onPress={() => handleEmailAuth()}
+              />
+
+              <OptionButton
+                icon="📱"
+                title="Continue with Phone"
+                onPress={() => handlePhoneAuth()}
               />
               
               <OptionButton
@@ -340,6 +350,11 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     // Navigate to email auth screen
     setShowMoreOptions(false);
     Alert.alert('Coming Soon', 'Email authentication will be available soon');
+  };
+
+  const handlePhoneAuth = async () => {
+    setShowMoreOptions(false);
+    Alert.alert('Coming Soon', 'Phone authentication will be available soon');
   };
 
   const handleGuestAuth = async () => {
