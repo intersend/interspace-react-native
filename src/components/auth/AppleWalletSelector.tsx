@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
@@ -15,10 +14,9 @@ import {
   SectionList,
   StatusBar,
   ScrollView,
-  Dimensions,
-  PanResponder,
   Linking,
 } from 'react-native';
+import AppleBottomTray from '../ui/AppleBottomTray';
 import { Apple } from '../../../constants/AppleDesign';
 import { useAuth } from '../../hooks/useAuth';
 import { WalletConnectConfig } from '../../types';
@@ -165,7 +163,6 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
   
   // Animation values
   const translateY = useRef(new Animated.Value(SNAP_POINTS.CLOSED)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
   
   const { login } = useAuth();
 
@@ -233,13 +230,6 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
             useNativeDriver: true,
           }).start();
           
-          // Update backdrop opacity
-          const newOpacity = targetPosition === SNAP_POINTS.FULL ? 0.7 : 0.5;
-          Animated.timing(backdropOpacity, {
-            toValue: newOpacity,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
         }
       },
     })
@@ -300,12 +290,6 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
       useNativeDriver: true,
     }).start();
     
-    // Fade in backdrop
-    Animated.timing(backdropOpacity, {
-      toValue: 0.5,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
   };
 
   const animateOut = (callback?: () => void) => {
@@ -315,13 +299,6 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
       duration: 250,
       useNativeDriver: true,
     }).start(callback);
-    
-    // Fade out backdrop
-    Animated.timing(backdropOpacity, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
     
     // Reset status bar
     StatusBar.setBarStyle('default');
@@ -525,38 +502,16 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
   if (!visible) return null;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="none"
-      transparent={true}
-      statusBarTranslucent={true}
-      onRequestClose={handleClose}
-    >
-      <View style={styles.container}>
-        {/* Backdrop */}
-        <Animated.View 
-          style={[
-            styles.backdrop,
-            { opacity: backdropOpacity }
-          ]}
-        >
-          <TouchableOpacity 
-            style={styles.backdropTouchable}
-            activeOpacity={1}
-            onPress={handleClose}
-          />
-        </Animated.View>
-        
-        {/* Sheet */}
-        <Animated.View 
-          style={[
-            styles.sheet,
-            {
-              transform: [{ translateY }]
-            }
-          ]}
-          {...panResponder.panHandlers}
-        >
+    <AppleBottomTray visible={visible} onClose={handleClose}>
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            transform: [{ translateY }]
+          }
+        ]}
+        {...panResponder.panHandlers}
+      >
           {/* Drag indicator */}
           <View style={styles.dragIndicator} />
           
@@ -654,23 +609,11 @@ export default function AppleWalletSelector({ visible, onClose, onSuccess }: App
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
-    </Modal>
+      </AppleBottomTray>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
-  backdropTouchable: {
-    flex: 1,
-  },
   sheet: {
     backgroundColor: Apple.Colors.systemBackground,
     borderTopLeftRadius: 12,

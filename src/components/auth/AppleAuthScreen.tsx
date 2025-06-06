@@ -32,7 +32,20 @@ interface SocialProvider {
   id: string;
   name: string;
   icon: string;
-  strategy: 'google' | 'apple' | 'facebook' | 'discord';
+  strategy:
+    | 'google'
+    | 'apple'
+    | 'facebook'
+    | 'x'
+    | 'discord'
+    | 'telegram'
+    | 'twitch'
+    | 'farcaster'
+    | 'github'
+    | 'line'
+    | 'coinbase'
+    | 'steam'
+    | 'backend';
   primary?: boolean;
 }
 
@@ -57,10 +70,64 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
     strategy: 'facebook',
   },
   {
+    id: 'x',
+    name: 'Continue with X',
+    icon: '𝕏',
+    strategy: 'x',
+  },
+  {
     id: 'discord',
     name: 'Continue with Discord',
     icon: '🎮',
     strategy: 'discord',
+  },
+  {
+    id: 'telegram',
+    name: 'Continue with Telegram',
+    icon: '✈️',
+    strategy: 'telegram',
+  },
+  {
+    id: 'twitch',
+    name: 'Continue with Twitch',
+    icon: '📺',
+    strategy: 'twitch',
+  },
+  {
+    id: 'farcaster',
+    name: 'Continue with Farcaster',
+    icon: '📡',
+    strategy: 'farcaster',
+  },
+  {
+    id: 'github',
+    name: 'Continue with GitHub',
+    icon: '🐱',
+    strategy: 'github',
+  },
+  {
+    id: 'line',
+    name: 'Continue with Line',
+    icon: '💚',
+    strategy: 'line',
+  },
+  {
+    id: 'coinbase',
+    name: 'Continue with Coinbase',
+    icon: '💙',
+    strategy: 'coinbase',
+  },
+  {
+    id: 'steam',
+    name: 'Continue with Steam',
+    icon: '🎮',
+    strategy: 'steam',
+  },
+  {
+    id: 'backend',
+    name: 'Continue with Backend',
+    icon: '🔑',
+    strategy: 'backend',
   },
 ];
 
