@@ -94,9 +94,10 @@ export default function IOSDragDropAppsScreen() {
   });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [dropTargetIndex, setDropTargetIndex] = useState<number>(-1);
-  
+
   // Grid positions for drag & drop
   const gridPositions = useRef<GridPosition[]>([]);
+  const gridItems = useRef<(App | Folder)[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
   
   // Animation values
@@ -146,6 +147,61 @@ export default function IOSDragDropAppsScreen() {
     setFolders(mockFolders);
   }, []);
 
+  const recalcPositions = (
+    appsList: App[],
+    folderList: Folder[],
+  ): { apps: App[]; folders: Folder[] } => {
+    let idx = 0;
+    const sortedFolders = folderList
+      .sort((a, b) => a.position - b.position)
+      .map((f) => ({ ...f, position: idx++ }));
+    const updatedApps = appsList.map((a) => {
+      if (a.folderId) return a;
+      const pos = idx++;
+      return { ...a, position: pos };
+    });
+    return { apps: updatedApps, folders: sortedFolders };
+  };
+
+  const addAppToFolder = (app: App, folder: Folder) => {
+    const updatedFolders = folders.map((f) =>
+      f.id === folder.id
+        ? { ...f, apps: [...f.apps, { ...app, folderId: folder.id, position: f.apps.length }] }
+        : f,
+    );
+    const updatedApps = apps.map((a) =>
+      a.id === app.id ? { ...a, folderId: folder.id } : a,
+    );
+    const { apps: resApps, folders: resFolders } = recalcPositions(updatedApps, updatedFolders);
+    setApps(resApps);
+    setFolders(resFolders);
+  };
+
+  const createFolderFromApps = (dragApp: App, targetApp: App) => {
+    const newFolderId = `folder-${Date.now()}`;
+    const newFolder: Folder = {
+      id: newFolderId,
+      name: 'Folder',
+      color: Apple.Colors.systemBlue,
+      position: targetApp.position,
+      apps: [
+        { ...targetApp, folderId: newFolderId, position: 0 },
+        { ...dragApp, folderId: newFolderId, position: 1 },
+      ],
+    };
+
+    const remainingApps = apps.filter((a) => a.id !== targetApp.id && a.id !== dragApp.id);
+    const updatedApps = [
+      ...remainingApps,
+      { ...targetApp, folderId: newFolderId },
+      { ...dragApp, folderId: newFolderId },
+    ];
+    const updatedFolders = [...folders, newFolder];
+    const { apps: resApps, folders: resFolders } = recalcPositions(updatedApps, updatedFolders);
+    setApps(resApps);
+    setFolders(resFolders);
+  };
+
   // Calculate grid positions
   useEffect(() => {
     const standaloneApps = apps.filter(app => !app.folderId);
@@ -164,6 +220,7 @@ export default function IOSDragDropAppsScreen() {
     });
     
     gridPositions.current = positions;
+    gridItems.current = allItems;
   }, [apps, folders]);
 
   // Animate widget opacity in edit mode
@@ -331,7 +388,18 @@ export default function IOSDragDropAppsScreen() {
 
   const handleDragEnd = useCallback((x: number, y: number) => {
     if (dropTargetIndex >= 0 && dragState.item) {
-      handleItemDrop(dragState.item, dropTargetIndex);
+      const target = gridItems.current[dropTargetIndex];
+      if (target && !('apps' in dragState.item)) {
+        if (target && 'apps' in target) {
+          addAppToFolder(dragState.item as App, target as Folder);
+        } else if ((target as App).id !== (dragState.item as App).id) {
+          createFolderFromApps(dragState.item as App, target as App);
+        } else {
+          handleItemDrop(dragState.item, dropTargetIndex);
+        }
+      } else {
+        handleItemDrop(dragState.item, dropTargetIndex);
+      }
     }
     
     setDragState({
