@@ -33,7 +33,6 @@ interface IOSAppIconProps {
   onDelete: () => void;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // App-specific gradients and icons with iOS-style colors
 const APP_THEMES: Record<string, { gradient: string[], secondaryGradient?: string[], icon?: string, iconColor?: string }> = {
@@ -222,14 +221,15 @@ export function IOSAppIcon({
 
   return (
     <View style={styles.container}>
-      <AnimatedPressable
-        style={[styles.touchTarget, animatedStyle]}
+      <Pressable
+        style={styles.touchTarget}
         onPress={onPress}
         onLongPress={onLongPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         delayLongPress={400}
       >
+        <Animated.View style={animatedStyle}>
         {/* Icon Container with multiple shadows for depth */}
         <View style={styles.iconOuterShadow}>
           <View style={styles.iconInnerShadow}>
@@ -292,7 +292,8 @@ export function IOSAppIcon({
             </Pressable>
           </Animated.View>
         )}
-      </AnimatedPressable>
+        </Animated.View>
+      </Pressable>
 
       {/* App Name */}
       <Text style={styles.appName} numberOfLines={1}>

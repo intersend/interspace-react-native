@@ -37,7 +37,6 @@ interface IOSFolderIconProps {
   onDelete: () => void;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // App themes for mini icons
 const MINI_APP_THEMES: Record<string, { gradient: string[], icon?: string }> = {
@@ -184,14 +183,15 @@ export function IOSFolderIcon({
 
   return (
     <View style={styles.container}>
-      <AnimatedPressable
-        style={[styles.touchTarget, animatedStyle]}
+      <Pressable
+        style={styles.touchTarget}
         onPress={onPress}
         onLongPress={onLongPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         delayLongPress={400}
       >
+        <Animated.View style={animatedStyle}>
         {/* Folder Container */}
         <View style={styles.folderOuterShadow}>
           <View style={styles.folderInnerShadow}>
@@ -236,7 +236,8 @@ export function IOSFolderIcon({
             </Pressable>
           </Animated.View>
         )}
-      </AnimatedPressable>
+        </Animated.View>
+      </Pressable>
 
       {/* Folder Name */}
       <Text style={styles.folderName} numberOfLines={1}>
