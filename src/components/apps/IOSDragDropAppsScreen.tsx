@@ -27,15 +27,9 @@ import Animated, {
   withTiming,
   interpolate,
   runOnJS,
-  useAnimatedGestureHandler,
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-import {
-  PanGestureHandler,
-  State,
-  LongPressGestureHandler,
-} from 'react-native-gesture-handler';
 
 const { width, height } = Dimensions.get('window');
 const ICONS_PER_ROW = 4;
@@ -86,6 +80,7 @@ export default function IOSDragDropAppsScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [browserVisible, setBrowserVisible] = useState(false);
   const [browserUrl, setBrowserUrl] = useState('');
+  const [openingAppId, setOpeningAppId] = useState<string | null>(null);
   const [openFolder, setOpenFolder] = useState<Folder | null>(null);
   const [folderPosition, setFolderPosition] = useState({ x: 0, y: 0 });
   const [dragState, setDragState] = useState<DragState>({
@@ -261,21 +256,28 @@ export default function IOSDragDropAppsScreen() {
     }
   }, [isEditMode, dragState.isActive, handleDonePress]);
 
-  const handleAppPress = useCallback((app: App) => {
-    if (isEditMode || dragState.isActive) return;
-    
-    hapticTrigger('impactLight');
-    setBrowserUrl(app.url);
-    
-    browserScale.value = 0.9;
-    browserOpacity.value = 0;
+  const handleAppPress = useCallback(
+    (app: App, position: { x: number; y: number }) => {
+      if (isEditMode || dragState.isActive) return;
 
-    browserScale.value = withTiming(1, { duration: 250 });
-    browserOpacity.value = withTiming(1, { duration: 250 });
-    backgroundBlur.value = withTiming(10, { duration: 250 });
-    
-    setBrowserVisible(true);
-  }, [isEditMode, dragState.isActive]);
+      hapticTrigger('impactLight');
+      setOpeningAppId(app.id);
+      setBrowserUrl(app.url);
+
+      browserScale.value = 0.85;
+      browserOpacity.value = 0;
+
+      browserScale.value = withTiming(1, { duration: 250 });
+      browserOpacity.value = withTiming(1, { duration: 250 });
+      backgroundBlur.value = withTiming(10, { duration: 250 });
+
+      setTimeout(() => {
+        setBrowserVisible(true);
+        setOpeningAppId(null);
+      }, 200);
+    },
+    [isEditMode, dragState.isActive],
+  );
 
   const handleFolderPress = useCallback((folder: Folder, position: { x: number; y: number }) => {
     if (isEditMode || dragState.isActive) return;
@@ -334,7 +336,7 @@ export default function IOSDragDropAppsScreen() {
   const handleSearchPress = useCallback(() => {
     hapticTrigger('impactLight');
     
-    browserScale.value = 0.9;
+    browserScale.value = 0.85;
     browserOpacity.value = 0;
 
     browserScale.value = withTiming(1, { duration: 250 });
@@ -492,7 +494,17 @@ export default function IOSDragDropAppsScreen() {
                 isEditMode={isEditMode}
                 position={{ x: position.x, y: position.y }}
                 index={itemIndex}
-                onPress={() => (isFolder ? handleFolderPress(item as Folder, { x: position.x + ICON_SIZE / 2, y: position.y + ICON_SIZE / 2 }) : handleAppPress(item as App))}
+                onPress={() =>
+                  isFolder
+                    ? handleFolderPress(item as Folder, {
+                        x: position.x + ICON_SIZE / 2,
+                        y: position.y + ICON_SIZE / 2,
+                      })
+                    : handleAppPress(item as App, {
+                        x: position.x + ICON_SIZE / 2,
+                        y: position.y + ICON_SIZE / 2,
+                      })
+                }
                 onLongPress={handleLongPress}
                 onDelete={() => (isFolder ? handleDeleteFolder(item.id) : handleDeleteApp(item.id))}
                 onDragStart={handleDragStart}
@@ -500,6 +512,7 @@ export default function IOSDragDropAppsScreen() {
                 onDragEnd={handleDragEnd}
                 isDragging={isDragging}
                 isDropTarget={dropTargetIndex === itemIndex}
+                isOpening={openingAppId === item.id}
               />
             );
           })}
@@ -528,7 +541,7 @@ export default function IOSDragDropAppsScreen() {
       
       {/* iOS 17 style gradient background */}
       <LinearGradient
-        colors={['#181818', '#0f0f0f', '#000000']}
+        colors={['#8e8e93', '#3a3a3c', '#000000']}
         style={styles.backgroundGradient}
         locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}

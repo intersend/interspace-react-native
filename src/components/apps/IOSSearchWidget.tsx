@@ -97,7 +97,7 @@ export function IOSSearchWidget({ onPress, recentApps = DEFAULT_RECENT_APPS }: I
               <View style={styles.searchSection}>
                 <View style={styles.searchBarWrapper}>
                   <LinearGradient
-                    colors={['rgba(50,50,52,0.95)', 'rgba(44,44,46,0.95)']}
+                    colors={[Apple.Colors.secondarySystemBackground, Apple.Colors.tertiarySystemBackground] as any}
                     style={styles.searchBar}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
