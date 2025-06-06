@@ -341,6 +341,11 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     setShowEmailModal(true);
   };
 
+  const handlePhoneAuth = async () => {
+    setShowMoreOptions(false);
+    Alert.alert('Coming Soon', 'Phone authentication will be available soon');
+  };
+
   const handleGuestAuth = async () => {
     setShowMoreOptions(false);
     setIsLoading(true);
