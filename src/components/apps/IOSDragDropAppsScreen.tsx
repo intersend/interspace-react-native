@@ -467,7 +467,21 @@ export default function IOSDragDropAppsScreen() {
           {rowItems.map((item, indexInRow) => {
             const isFolder = 'apps' in item;
             const itemIndex = pageIndex * ICONS_PER_PAGE + i * ICONS_PER_ROW + indexInRow;
-            const position = gridPositions.current[itemIndex];
+            let position = gridPositions.current[itemIndex];
+            if (!position) {
+              const row = Math.floor((itemIndex % ICONS_PER_PAGE) / ICONS_PER_ROW);
+              const col = itemIndex % ICONS_PER_ROW;
+              position = {
+                page: pageIndex,
+                row,
+                col,
+                x:
+                  pageIndex * width +
+                  HORIZONTAL_PADDING +
+                  col * (ICON_SIZE + ICON_SPACING),
+                y: 100 + row * (ICON_SIZE + VERTICAL_SPACING),
+              };
+            }
             const isDragging = dragState.isActive && dragState.item?.id === item.id;
 
             return (
