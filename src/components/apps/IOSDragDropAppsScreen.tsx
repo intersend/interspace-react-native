@@ -267,22 +267,12 @@ export default function IOSDragDropAppsScreen() {
     hapticTrigger('impactLight');
     setBrowserUrl(app.url);
     
-    // Animate browser opening from widget position
-    const widgetY = height - 200; // Approximate widget position
-    browserScale.value = 0;
+    browserScale.value = 0.9;
     browserOpacity.value = 0;
-    
-    // Set initial position
-    browserScale.value = withSequence(
-      withTiming(0.3, { duration: 0 }),
-      withSpring(1, {
-        damping: 20,
-        stiffness: 350,
-      })
-    );
-    
-    browserOpacity.value = withTiming(1, { duration: 300 });
-    backgroundBlur.value = withTiming(10, { duration: 300 });
+
+    browserScale.value = withTiming(1, { duration: 250 });
+    browserOpacity.value = withTiming(1, { duration: 250 });
+    backgroundBlur.value = withTiming(10, { duration: 250 });
     
     setBrowserVisible(true);
   }, [isEditMode, dragState.isActive]);
@@ -344,12 +334,10 @@ export default function IOSDragDropAppsScreen() {
   const handleSearchPress = useCallback(() => {
     hapticTrigger('impactLight');
     
-    // Animate browser opening from widget
-    browserScale.value = withSpring(1, {
-      damping: 18,
-      stiffness: 300,
-      overshootClamping: false,
-    });
+    browserScale.value = 0.9;
+    browserOpacity.value = 0;
+
+    browserScale.value = withTiming(1, { duration: 250 });
     browserOpacity.value = withTiming(1, { duration: 250 });
     backgroundBlur.value = withTiming(10, { duration: 250 });
     
@@ -526,9 +514,9 @@ export default function IOSDragDropAppsScreen() {
       
       {/* iOS 17 style gradient background */}
       <LinearGradient
-        colors={['#1a1a2e', '#0f0f1e', '#05050a', '#000000']}
+        colors={['#181818', '#0f0f0f', '#000000']}
         style={styles.backgroundGradient}
-        locations={[0, 0.3, 0.7, 1]}
+        locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />

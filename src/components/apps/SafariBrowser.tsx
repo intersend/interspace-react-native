@@ -61,23 +61,13 @@ export function SafariBrowser({ visible, initialUrl, onClose }: SafariBrowserPro
   useEffect(() => {
     if (visible) {
       hapticTrigger('impactLight');
-      translateY.value = withSpring(0, {
-        damping: 25,
-        stiffness: 400,
-        mass: 0.8,
-      });
-      scale.value = withSpring(1, {
-        damping: 20,
-        stiffness: 350,
-      });
+      translateY.value = withTiming(0, { duration: 250 });
+      scale.value = withTiming(1, { duration: 250 });
       opacity.value = withTiming(1, { duration: 250 });
-      borderRadius.value = withTiming(0, { duration: 300 });
+      borderRadius.value = withTiming(0, { duration: 250 });
     } else {
-      translateY.value = withSpring(height, {
-        damping: 25,
-        stiffness: 400,
-      });
-      scale.value = withTiming(0.9, { duration: 200 });
+      translateY.value = withTiming(height, { duration: 200 });
+      scale.value = withTiming(0.95, { duration: 200 });
       opacity.value = withTiming(0, { duration: 200 });
       borderRadius.value = withTiming(40, { duration: 200 });
     }
