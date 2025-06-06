@@ -27,7 +27,8 @@ Interspace is a wallet wrapper that allows users to:
 
 ### 2. Apps
 - iOS inspired home screen with dynamic app icons and folders
-- Drag-and-drop organization just like on iPhone
+- Horizontal paging with page dots just like iOS
+- Drag-and-drop organization and folder creation
 - Built-in browser with wallet injection
 - Custom transaction confirmation UI
 

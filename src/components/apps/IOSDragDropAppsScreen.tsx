@@ -10,14 +10,12 @@ import {
   Text,
   TouchableWithoutFeedback,
   LayoutAnimation,
-  LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Apple } from '@/constants/AppleDesign';
 import { DraggableAppIcon } from '@/src/components/apps/DraggableAppIcon';
-import { IOSAppIcon } from '@/src/components/apps/IOSAppIcon';
-import { IOSFolderIcon } from '@/src/components/apps/IOSFolderIcon';
+// Icon components are used within DraggableAppIcon
 import { IOSSearchWidget } from '@/src/components/apps/IOSSearchWidget';
 import { IOSFolderModal } from '@/src/components/apps/IOSFolderModal';
 import { SafariBrowser } from '@/src/components/apps/SafariBrowser';
@@ -41,6 +39,8 @@ import {
 
 const { width, height } = Dimensions.get('window');
 const ICONS_PER_ROW = 4;
+const ROWS_PER_PAGE = 5; // mimic iOS grid height
+const ICONS_PER_PAGE = ICONS_PER_ROW * ROWS_PER_PAGE;
 const ICON_SIZE = 74;
 const HORIZONTAL_PADDING = 20;
 const ICON_SPACING = (width - HORIZONTAL_PADDING * 2 - ICON_SIZE * ICONS_PER_ROW) / (ICONS_PER_ROW - 1);
@@ -67,6 +67,7 @@ interface Folder {
 }
 
 interface GridPosition {
+  page: number;
   row: number;
   col: number;
   x: number;
@@ -94,6 +95,8 @@ export default function IOSDragDropAppsScreen() {
   });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [dropTargetIndex, setDropTargetIndex] = useState<number>(-1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Grid positions for drag & drop
   const gridPositions = useRef<GridPosition[]>([]);
@@ -202,23 +205,30 @@ export default function IOSDragDropAppsScreen() {
     setFolders(resFolders);
   };
 
-  // Calculate grid positions
+  // Calculate grid positions and pages
   useEffect(() => {
     const standaloneApps = apps.filter(app => !app.folderId);
     const allItems = [...standaloneApps, ...folders].sort((a, b) => a.position - b.position);
-    
+
     const positions: GridPosition[] = [];
+
+    const pages = Math.max(1, Math.ceil(allItems.length / ICONS_PER_PAGE));
+    setTotalPages(pages);
+
     allItems.forEach((item, index) => {
-      const row = Math.floor(index / ICONS_PER_ROW);
-      const col = index % ICONS_PER_ROW;
+      const page = Math.floor(index / ICONS_PER_PAGE);
+      const indexInPage = index % ICONS_PER_PAGE;
+      const row = Math.floor(indexInPage / ICONS_PER_ROW);
+      const col = indexInPage % ICONS_PER_ROW;
       positions.push({
+        page,
         row,
         col,
-        x: HORIZONTAL_PADDING + col * (ICON_SIZE + ICON_SPACING),
+        x: page * width + HORIZONTAL_PADDING + col * (ICON_SIZE + ICON_SPACING),
         y: 100 + row * (ICON_SIZE + VERTICAL_SPACING),
       });
     });
-    
+
     gridPositions.current = positions;
     gridItems.current = allItems;
   }, [apps, folders]);
@@ -257,22 +267,12 @@ export default function IOSDragDropAppsScreen() {
     hapticTrigger('impactLight');
     setBrowserUrl(app.url);
     
-    // Animate browser opening from widget position
-    const widgetY = height - 200; // Approximate widget position
-    browserScale.value = 0;
+    browserScale.value = 0.9;
     browserOpacity.value = 0;
-    
-    // Set initial position
-    browserScale.value = withSequence(
-      withTiming(0.3, { duration: 0 }),
-      withSpring(1, {
-        damping: 20,
-        stiffness: 350,
-      })
-    );
-    
-    browserOpacity.value = withTiming(1, { duration: 300 });
-    backgroundBlur.value = withTiming(10, { duration: 300 });
+
+    browserScale.value = withTiming(1, { duration: 250 });
+    browserOpacity.value = withTiming(1, { duration: 250 });
+    backgroundBlur.value = withTiming(10, { duration: 250 });
     
     setBrowserVisible(true);
   }, [isEditMode, dragState.isActive]);
@@ -334,12 +334,10 @@ export default function IOSDragDropAppsScreen() {
   const handleSearchPress = useCallback(() => {
     hapticTrigger('impactLight');
     
-    // Animate browser opening from widget
-    browserScale.value = withSpring(1, {
-      damping: 18,
-      stiffness: 300,
-      overshootClamping: false,
-    });
+    browserScale.value = 0.9;
+    browserOpacity.value = 0;
+
+    browserScale.value = withTiming(1, { duration: 250 });
     browserOpacity.value = withTiming(1, { duration: 250 });
     backgroundBlur.value = withTiming(10, { duration: 250 });
     
@@ -450,65 +448,45 @@ export default function IOSDragDropAppsScreen() {
   });
 
 
-  const renderGrid = () => {
+  const renderGrid = (pageIndex: number) => {
     // Get all items (apps not in folders + folders)
     const standaloneApps = apps.filter(app => !app.folderId);
     const allItems = [...standaloneApps, ...folders].sort((a, b) => a.position - b.position);
-    
+
+    const pageItems = allItems.slice(
+      pageIndex * ICONS_PER_PAGE,
+      (pageIndex + 1) * ICONS_PER_PAGE,
+    );
+
     const rows = [];
-    for (let i = 0; i < allItems.length; i += ICONS_PER_ROW) {
-      const rowItems = allItems.slice(i, i + ICONS_PER_ROW);
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+      const start = i * ICONS_PER_ROW;
+      const rowItems = pageItems.slice(start, start + ICONS_PER_ROW);
       rows.push(
         <View key={`row-${i}`} style={styles.row}>
-          {rowItems.map((item, index) => {
+          {rowItems.map((item, indexInRow) => {
             const isFolder = 'apps' in item;
+            const itemIndex = pageIndex * ICONS_PER_PAGE + i * ICONS_PER_ROW + indexInRow;
+            const position = gridPositions.current[itemIndex];
             const isDragging = dragState.isActive && dragState.item?.id === item.id;
-            
+
             return (
-              <View 
-                key={item.id} 
-                style={[
-                  styles.iconWrapper,
-                  isDragging && styles.draggingPlaceholder,
-                ]}
-                onLayout={(event: LayoutChangeEvent) => {
-                  // Store position for drag calculations
-                  const { x, y } = event.nativeEvent.layout;
-                  // Update grid positions if needed
-                }}
-              >
-                {!isDragging && (
-                  isFolder ? (
-                    <IOSFolderIcon
-                      id={item.id}
-                      name={item.name}
-                      apps={item.apps}
-                      color={item.color}
-                      isEditMode={isEditMode}
-                      onPress={() => {
-                        const rowIndex = Math.floor(i / ICONS_PER_ROW);
-                        const colIndex = index;
-                        const x = HORIZONTAL_PADDING + colIndex * (ICON_SIZE + ICON_SPACING) + ICON_SIZE / 2;
-                        const y = 100 + rowIndex * (ICON_SIZE + VERTICAL_SPACING) + ICON_SIZE / 2;
-                        handleFolderPress(item, { x, y });
-                      }}
-                      onLongPress={handleLongPress}
-                      onDelete={() => handleDeleteFolder(item.id)}
-                    />
-                  ) : (
-                    <IOSAppIcon
-                      id={item.id}
-                      name={item.name}
-                      url={item.url}
-                      iconUrl={item.iconUrl}
-                      isEditMode={isEditMode}
-                      onPress={() => handleAppPress(item)}
-                      onLongPress={handleLongPress}
-                      onDelete={() => handleDeleteApp(item.id)}
-                    />
-                  )
-                )}
-              </View>
+              <DraggableAppIcon
+                key={item.id}
+                item={item}
+                isFolder={isFolder}
+                isEditMode={isEditMode}
+                position={{ x: position.x, y: position.y }}
+                index={itemIndex}
+                onPress={() => (isFolder ? handleFolderPress(item as Folder, { x: position.x + ICON_SIZE / 2, y: position.y + ICON_SIZE / 2 }) : handleAppPress(item as App))}
+                onLongPress={handleLongPress}
+                onDelete={() => (isFolder ? handleDeleteFolder(item.id) : handleDeleteApp(item.id))}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                isDragging={isDragging}
+                isDropTarget={dropTargetIndex === itemIndex}
+              />
             );
           })}
           {/* Fill empty slots in row */}
@@ -536,9 +514,9 @@ export default function IOSDragDropAppsScreen() {
       
       {/* iOS 17 style gradient background */}
       <LinearGradient
-        colors={['#1a1a2e', '#0f0f1e', '#05050a', '#000000']}
+        colors={['#181818', '#0f0f0f', '#000000']}
         style={styles.backgroundGradient}
-        locations={[0, 0.3, 0.7, 1]}
+        locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
@@ -570,21 +548,30 @@ export default function IOSDragDropAppsScreen() {
             <View style={styles.touchableContainer}>
               <ScrollView
                 ref={scrollViewRef}
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                bounces={true}
-                alwaysBounceVertical={true}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const page = Math.round(e.nativeEvent.contentOffset.x / width);
+                  setCurrentPage(page);
+                }}
                 scrollEnabled={!isEditMode || !dragState.isActive}
               >
-                {/* App Grid */}
-                <View style={styles.gridContainer}>
-                  {renderGrid()}
-                </View>
-                
-                {/* Spacer to push widget to bottom */}
-                <View style={styles.spacer} />
+                {Array.from({ length: totalPages }).map((_, pageIndex) => (
+                  <View key={`page-${pageIndex}`} style={{ width }}>
+                    <View style={styles.gridContainer}>{renderGrid(pageIndex)}</View>
+                  </View>
+                ))}
               </ScrollView>
+
+              <View style={styles.pageIndicator}>
+                {Array.from({ length: totalPages }).map((_, idx) => (
+                  <View
+                    key={idx}
+                    style={[styles.pageDot, idx === currentPage && styles.activePageDot]}
+                  />
+                ))}
+              </View>
               
               {/* Search Widget at bottom */}
               <Animated.View style={[styles.widgetContainer, widgetAnimatedStyle]}>
@@ -688,10 +675,6 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingTop: 10,
-  },
   gridContainer: {
     paddingHorizontal: HORIZONTAL_PADDING,
   },
@@ -710,9 +693,20 @@ const styles = StyleSheet.create({
   emptySlot: {
     width: ICON_SIZE,
   },
-  spacer: {
-    flex: 1,
-    minHeight: 140,
+  pageIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  pageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginHorizontal: 3,
+  },
+  activePageDot: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
   widgetContainer: {
     position: 'absolute',
