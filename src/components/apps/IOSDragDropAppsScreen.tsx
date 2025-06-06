@@ -18,6 +18,7 @@ import { DraggableAppIcon } from '@/src/components/apps/DraggableAppIcon';
 // Icon components are used within DraggableAppIcon
 import { IOSSearchWidget } from '@/src/components/apps/IOSSearchWidget';
 import { IOSFolderModal } from '@/src/components/apps/IOSFolderModal';
+import { IOSSpotlightModal } from '@/src/components/apps/IOSSpotlightModal';
 import { SafariBrowser } from '@/src/components/apps/SafariBrowser';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
 import Animated, {
@@ -27,15 +28,9 @@ import Animated, {
   withTiming,
   interpolate,
   runOnJS,
-  useAnimatedGestureHandler,
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-import {
-  PanGestureHandler,
-  State,
-  LongPressGestureHandler,
-} from 'react-native-gesture-handler';
 
 const { width, height } = Dimensions.get('window');
 const ICONS_PER_ROW = 4;
@@ -86,6 +81,8 @@ export default function IOSDragDropAppsScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [browserVisible, setBrowserVisible] = useState(false);
   const [browserUrl, setBrowserUrl] = useState('');
+  const [openingAppId, setOpeningAppId] = useState<string | null>(null);
+  const [spotlightVisible, setSpotlightVisible] = useState(false);
   const [openFolder, setOpenFolder] = useState<Folder | null>(null);
   const [folderPosition, setFolderPosition] = useState({ x: 0, y: 0 });
   const [dragState, setDragState] = useState<DragState>({
@@ -261,21 +258,28 @@ export default function IOSDragDropAppsScreen() {
     }
   }, [isEditMode, dragState.isActive, handleDonePress]);
 
-  const handleAppPress = useCallback((app: App) => {
-    if (isEditMode || dragState.isActive) return;
-    
-    hapticTrigger('impactLight');
-    setBrowserUrl(app.url);
-    
-    browserScale.value = 0.9;
-    browserOpacity.value = 0;
+  const handleAppPress = useCallback(
+    (app: App, position: { x: number; y: number }) => {
+      if (isEditMode || dragState.isActive) return;
 
-    browserScale.value = withTiming(1, { duration: 250 });
-    browserOpacity.value = withTiming(1, { duration: 250 });
-    backgroundBlur.value = withTiming(10, { duration: 250 });
-    
-    setBrowserVisible(true);
-  }, [isEditMode, dragState.isActive]);
+      hapticTrigger('impactLight');
+      setOpeningAppId(app.id);
+      setBrowserUrl(app.url);
+
+      browserScale.value = 0.85;
+      browserOpacity.value = 0;
+
+      browserScale.value = withTiming(1, { duration: 250 });
+      browserOpacity.value = withTiming(1, { duration: 250 });
+      backgroundBlur.value = withTiming(10, { duration: 250 });
+
+      setTimeout(() => {
+        setBrowserVisible(true);
+        setOpeningAppId(null);
+      }, 200);
+    },
+    [isEditMode, dragState.isActive],
+  );
 
   const handleFolderPress = useCallback((folder: Folder, position: { x: number; y: number }) => {
     if (isEditMode || dragState.isActive) return;
@@ -333,16 +337,30 @@ export default function IOSDragDropAppsScreen() {
 
   const handleSearchPress = useCallback(() => {
     hapticTrigger('impactLight');
-    
-    browserScale.value = 0.9;
-    browserOpacity.value = 0;
-
-    browserScale.value = withTiming(1, { duration: 250 });
-    browserOpacity.value = withTiming(1, { duration: 250 });
-    backgroundBlur.value = withTiming(10, { duration: 250 });
-    
-    setBrowserVisible(true);
+    setSpotlightVisible(true);
   }, []);
+
+  const handleSearchSubmit = useCallback(
+    (text: string) => {
+      setSpotlightVisible(false);
+      if (!text) return;
+      let finalUrl = text;
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = 'https://' + finalUrl;
+      }
+
+      browserScale.value = 0.85;
+      browserOpacity.value = 0;
+
+      browserScale.value = withTiming(1, { duration: 250 });
+      browserOpacity.value = withTiming(1, { duration: 250 });
+      backgroundBlur.value = withTiming(10, { duration: 250 });
+
+      setBrowserUrl(finalUrl);
+      setBrowserVisible(true);
+    },
+    [],
+  );
 
   const handleBrowserClose = useCallback(() => {
     // Animate browser closing
@@ -410,29 +428,36 @@ export default function IOSDragDropAppsScreen() {
 
   const handleItemDrop = (item: App | Folder, newPosition: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    
-    // Update item positions
-    if ('apps' in item) {
-      // It's a folder
-      setFolders(prev => {
-        const updated = [...prev];
-        const itemIndex = updated.findIndex(f => f.id === item.id);
-        if (itemIndex >= 0) {
-          updated[itemIndex] = { ...updated[itemIndex], position: newPosition };
-        }
-        return updated.sort((a, b) => a.position - b.position);
-      });
-    } else {
-      // It's an app
-      setApps(prev => {
-        const updated = [...prev];
-        const itemIndex = updated.findIndex(a => a.id === item.id);
-        if (itemIndex >= 0) {
-          updated[itemIndex] = { ...updated[itemIndex], position: newPosition };
-        }
-        return updated.sort((a, b) => a.position - b.position);
-      });
-    }
+
+    // Collect visible items sorted by position
+    const standaloneApps = apps.filter((a) => !a.folderId);
+    const allItems: (App | Folder)[] = [...standaloneApps, ...folders].sort(
+      (a, b) => a.position - b.position,
+    );
+
+    const currentIndex = allItems.findIndex((i) => i.id === item.id);
+    if (currentIndex === -1) return;
+
+    const clampedPosition = Math.max(0, Math.min(newPosition, allItems.length - 1));
+
+    allItems.splice(currentIndex, 1);
+    allItems.splice(clampedPosition, 0, item);
+
+    const updatedApps = [...apps];
+    const updatedFolders = [...folders];
+
+    allItems.forEach((it, idx) => {
+      if ('apps' in it) {
+        const fIdx = updatedFolders.findIndex((f) => f.id === it.id);
+        if (fIdx >= 0) updatedFolders[fIdx] = { ...updatedFolders[fIdx], position: idx };
+      } else {
+        const aIdx = updatedApps.findIndex((a) => a.id === it.id);
+        if (aIdx >= 0) updatedApps[aIdx] = { ...updatedApps[aIdx], position: idx };
+      }
+    });
+
+    setApps(updatedApps.sort((a, b) => a.position - b.position));
+    setFolders(updatedFolders.sort((a, b) => a.position - b.position));
   };
 
   const backgroundAnimatedStyle = useAnimatedStyle(() => {
@@ -492,7 +517,17 @@ export default function IOSDragDropAppsScreen() {
                 isEditMode={isEditMode}
                 position={{ x: position.x, y: position.y }}
                 index={itemIndex}
-                onPress={() => (isFolder ? handleFolderPress(item as Folder, { x: position.x + ICON_SIZE / 2, y: position.y + ICON_SIZE / 2 }) : handleAppPress(item as App))}
+                onPress={() =>
+                  isFolder
+                    ? handleFolderPress(item as Folder, {
+                        x: position.x + ICON_SIZE / 2,
+                        y: position.y + ICON_SIZE / 2,
+                      })
+                    : handleAppPress(item as App, {
+                        x: position.x + ICON_SIZE / 2,
+                        y: position.y + ICON_SIZE / 2,
+                      })
+                }
                 onLongPress={handleLongPress}
                 onDelete={() => (isFolder ? handleDeleteFolder(item.id) : handleDeleteApp(item.id))}
                 onDragStart={handleDragStart}
@@ -500,6 +535,7 @@ export default function IOSDragDropAppsScreen() {
                 onDragEnd={handleDragEnd}
                 isDragging={isDragging}
                 isDropTarget={dropTargetIndex === itemIndex}
+                isOpening={openingAppId === item.id}
               />
             );
           })}
@@ -528,7 +564,7 @@ export default function IOSDragDropAppsScreen() {
       
       {/* iOS 17 style gradient background */}
       <LinearGradient
-        colors={['#181818', '#0f0f0f', '#000000']}
+        colors={['#8e8e93', '#3a3a3c', '#000000']}
         style={styles.backgroundGradient}
         locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
@@ -604,6 +640,13 @@ export default function IOSDragDropAppsScreen() {
         visible={browserVisible}
         initialUrl={browserUrl}
         onClose={handleBrowserClose}
+      />
+
+      {/* Spotlight Search Modal */}
+      <IOSSpotlightModal
+        visible={spotlightVisible}
+        onClose={() => setSpotlightVisible(false)}
+        onSubmit={handleSearchSubmit}
       />
       
       {/* Folder Modal */}
