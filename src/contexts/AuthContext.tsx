@@ -331,14 +331,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     
     try {
       wallet = await connect(async () => {
-        const inApp = inAppWallet();
-        await inApp.connect({
+        const extWallet = config.wallet!;
+        await extWallet.connect({
           client,
-          strategy: 'wallet',
-          wallet: config.wallet,
           chain: config.chain || DEFAULT_CHAIN,
         });
-        return inApp;
+        return extWallet;
       });
 
       if (!wallet) throw new Error('Failed to connect external wallet');

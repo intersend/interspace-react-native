@@ -229,22 +229,22 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   );
 
   const renderMoreOptions = () => (
-    <AppleBottomTray visible={showMoreOptions} onClose={() => setShowMoreOptions(false)}>
-      <View style={styles.modalContent}>
-          <View style={styles.modalHandle} />
-          
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowMoreOptions(false)}
-            >
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Sign In Options</Text>
-            <View style={styles.modalCloseButton} />
-          </View>
+    <AppleBottomTray
+      visible={showMoreOptions}
+      onClose={() => setShowMoreOptions(false)}
+    >
+      <View style={styles.modalHeader}>
+        <TouchableOpacity
+          style={styles.modalCloseButton}
+          onPress={() => setShowMoreOptions(false)}
+        >
+          <Text style={styles.modalCloseText}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.modalTitle}>Sign In Options</Text>
+        <View style={styles.modalCloseButton} />
+      </View>
 
-          <ScrollView style={styles.modalScroll}>
+      <ScrollView style={styles.modalScroll}>
             {/* Social Options */}
             <View style={styles.optionGroup}>
               <Text style={styles.optionGroupTitle}>Social</Text>
@@ -313,7 +313,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
               </View>
             )}
           </ScrollView>
-        </View>
       </AppleBottomTray>
   );
 
@@ -590,20 +589,6 @@ const styles = StyleSheet.create({
   },
   legalLink: {
     color: Apple.Colors.systemBlue,
-  },
-  modalContent: {
-    backgroundColor: Apple.Colors.systemBackground,
-    borderTopLeftRadius: Apple.Radius.standard,
-    borderTopRightRadius: Apple.Radius.standard,
-    maxHeight: '90%',
-  },
-  modalHandle: {
-    width: 36,
-    height: 5,
-    backgroundColor: Apple.Colors.tertiaryLabel,
-    borderRadius: 2.5,
-    alignSelf: 'center',
-    marginTop: Apple.Spacing.small,
   },
   modalHeader: {
     flexDirection: 'row',
