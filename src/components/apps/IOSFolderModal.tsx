@@ -24,9 +24,12 @@ import { IOSAppIcon } from './IOSAppIcon';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
-const FOLDER_WIDTH = width - 30;
-const FOLDER_HEIGHT = 380;
+// Folder size tuned to better match iOS folder popover
+const FOLDER_WIDTH = width - 50;
+const FOLDER_HEIGHT = Math.min(400, height * 0.75);
 const ICONS_PER_ROW = 3;
+const ROWS_PER_PAGE = 3;
+const ICONS_PER_PAGE = ICONS_PER_ROW * ROWS_PER_PAGE;
 const ICON_SIZE = 74;
 const ICON_SPACING = 25;
 
@@ -65,6 +68,8 @@ export function IOSFolderModal({
   const translateY = useSharedValue(0);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editedName, setEditedName] = React.useState(folderName);
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const totalPages = Math.max(1, Math.ceil(apps.length / ICONS_PER_PAGE));
 
   useEffect(() => {
     if (visible) {
@@ -130,10 +135,12 @@ export function IOSFolderModal({
     setIsEditing(false);
   };
 
-  const renderApps = () => {
+  const renderApps = (page: number) => {
+    const startIndex = page * ICONS_PER_PAGE;
+    const pageApps = apps.slice(startIndex, startIndex + ICONS_PER_PAGE);
     const rows = [];
-    for (let i = 0; i < apps.length; i += ICONS_PER_ROW) {
-      const rowApps = apps.slice(i, i + ICONS_PER_ROW);
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+      const rowApps = pageApps.slice(i * ICONS_PER_ROW, (i + 1) * ICONS_PER_ROW);
       rows.push(
         <View key={`row-${i}`} style={styles.appRow}>
           {rowApps.map((app) => (
@@ -207,18 +214,34 @@ export function IOSFolderModal({
                     {/* Apps grid */}
                     <ScrollView
                       style={styles.appsContainer}
-                      contentContainerStyle={styles.appsContent}
-                      showsVerticalScrollIndicator={false}
-                      bounces={true}
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      onMomentumScrollEnd={(e) =>
+                        setCurrentPage(
+                          Math.round(e.nativeEvent.contentOffset.x / FOLDER_WIDTH),
+                        )
+                      }
                     >
-                      {renderApps()}
+                      {Array.from({ length: totalPages }).map((_, pageIndex) => (
+                        <View key={`page-${pageIndex}`} style={{ width: FOLDER_WIDTH }}>
+                          {renderApps(pageIndex)}
+                        </View>
+                      ))}
                     </ScrollView>
 
-                    {/* Page dots if needed */}
-                    {apps.length > 9 && (
+                    {/* Page dots */}
+                    {totalPages > 1 && (
                       <View style={styles.pageDots}>
-                        <View style={[styles.dot, styles.activeDot]} />
-                        <View style={styles.dot} />
+                        {Array.from({ length: totalPages }).map((_, idx) => (
+                          <View
+                            key={`dot-${idx}`}
+                            style={[
+                              styles.dot,
+                              idx === currentPage && styles.activeDot,
+                            ]}
+                          />
+                        ))}
                       </View>
                     )}
                   </LinearGradient>
@@ -286,10 +309,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   appsContainer: {
-    flex: 1,
-  },
-  appsContent: {
-    paddingBottom: 20,
+    flexGrow: 0,
   },
   appRow: {
     flexDirection: 'row',
