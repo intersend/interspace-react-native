@@ -25,8 +25,8 @@ import { hapticTrigger } from '@/src/utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
 // Folder size tuned to better match iOS folder popover
-const FOLDER_WIDTH = width - 50;
-const FOLDER_HEIGHT = Math.min(400, height * 0.75);
+const FOLDER_WIDTH = width - 60;
+const FOLDER_HEIGHT = Math.min(360, height * 0.65);
 const ICONS_PER_ROW = 3;
 const ROWS_PER_PAGE = 3;
 const ICONS_PER_PAGE = ICONS_PER_ROW * ROWS_PER_PAGE;
