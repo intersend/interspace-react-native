@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppleOnboarding from './onboarding/AppleOnboarding';
-import CleanAuthScreen from './auth/CleanAuthScreen';
+import AppleNativeAuthScreen from './auth/AppleNativeAuthScreen';
 import { useAuth } from '../hooks/useAuth';
 
 interface CleanAppFlowProps {
@@ -115,7 +115,7 @@ export default function CleanAppFlow({ children }: CleanAppFlowProps) {
     
     case 'authentication':
       return (
-        <CleanAuthScreen 
+        <AppleNativeAuthScreen 
           onAuthSuccess={handleAuthSuccess}
         />
       );

@@ -326,157 +326,248 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const connectExternalWallet = async (config: WalletConnectConfig) => {
     console.log('👛 Connecting external wallet...');
-
-    const wallet = await connect(async () => {
-      const inApp = inAppWallet();
-      await inApp.connect({
-        client,
-        strategy: 'wallet',
-        wallet: config.wallet,
-        chain: config.chain || DEFAULT_CHAIN,
+    
+    // Declare wallet variable outside try block so it's accessible in catch
+    let wallet;
+    
+    try {
+      wallet = await connect(async () => {
+        const inApp = inAppWallet();
+        await inApp.connect({
+          client,
+          strategy: 'wallet',
+          wallet: config.wallet,
+          chain: config.chain || DEFAULT_CHAIN,
+        });
+        return inApp;
       });
-      return inApp;
-    });
 
-    if (!wallet) throw new Error('Failed to connect external wallet');
-    
-    const account = wallet.getAccount();
-    if (!account) throw new Error('Failed to get wallet account');
+      if (!wallet) throw new Error('Failed to connect external wallet');
+      
+      const account = wallet.getAccount();
+      if (!account) throw new Error('Failed to get wallet account');
 
-    // Generate SIWE payload
-    const payload = await thirdwebAuth.generatePayload({
-      address: account.address,
-      chainId: DEFAULT_CHAIN.id,
-    });
+      // Generate SIWE payload with more user-friendly message
+      const payload = await thirdwebAuth.generatePayload({
+        address: account.address,
+        chainId: DEFAULT_CHAIN.id,
+        // Statement is added in the message formatting below
+      });
 
-    // Sign the message
-    const message = `${payload.domain} wants you to sign in with your Ethereum account:\n${payload.address}\n\n${payload.statement || 'Sign in to Interspace'}\n\nURI: ${payload.uri}\nVersion: ${payload.version}\nChain ID: ${payload.chain_id}\nNonce: ${payload.nonce}\nIssued At: ${payload.issued_at}`;
-    
-    const signature = await account.signMessage({ message });
+      // Format the message for better readability on mobile with custom statement
+      const message = `${payload.domain} wants you to sign in with your Ethereum account:
+${payload.address}
 
-    // Verify signature
-    const verifiedPayload = await thirdwebAuth.verifyPayload({ payload, signature });
-    if (!verifiedPayload.valid) {
-      throw new Error('SIWE signature verification failed');
+Sign in to Interspace Wallet to access your SmartProfiles and apps
+
+URI: ${payload.uri}
+Version: ${payload.version}
+Chain ID: ${payload.chain_id}
+Nonce: ${payload.nonce}
+Issued At: ${payload.issued_at}`;
+      
+      console.log('🔏 Requesting signature for SIWE message...');
+      
+      // Add timeout handling for signing
+      const signPromise = account.signMessage({ message });
+      const timeoutPromise = new Promise<string>((_, reject) => 
+        setTimeout(() => reject(new Error("Signing request timed out after 60 seconds")), 60000)
+      );
+      
+      const signature = await Promise.race([signPromise, timeoutPromise]);
+
+      // Verify signature
+      console.log('✅ Signature received, verifying...');
+      const verifiedPayload = await thirdwebAuth.verifyPayload({ payload, signature });
+      if (!verifiedPayload.valid) {
+        throw new Error('SIWE signature verification failed');
+      }
+
+      console.log('✅ External wallet SIWE completed successfully');
+
+      return {
+        wallet,
+        authToken: `siwe_${signature}_${Date.now()}`,
+        walletAddress: account.address,
+      };
+    } catch (error: any) {
+      console.error('❌ SIWE authentication failed:', error);
+      
+      // Store wallet reference for cleanup
+      let walletToDisconnect = wallet;
+      
+      // Disconnect wallet on error to clean up state
+      if (walletToDisconnect) {
+        try {
+          console.log('🔌 Disconnecting wallet after error');
+          disconnect(walletToDisconnect);
+        } catch (disconnectError) {
+          console.warn('⚠️ Failed to disconnect wallet after error:', disconnectError);
+        }
+      }
+      
+      // Enhance error message for common issues
+      if (error.message?.includes('User rejected')) {
+        throw new Error('You cancelled the signature request');
+      } else if (error.message?.includes('timeout')) {
+        throw new Error('Signature request timed out. Please try again');
+      } else if (error.message?.includes('network')) {
+        throw new Error('Network error. Please check your connection and try again');
+      }
+      
+      throw error;
     }
-
-    console.log('✅ External wallet SIWE completed');
-
-    return {
-      wallet,
-      authToken: `siwe_${signature}_${Date.now()}`,
-      walletAddress: account.address,
-    };
   };
 
   const connectInAppWallet = async (config: WalletConnectConfig) => {
     console.log('📱 Connecting in-app wallet...');
 
-    const wallet = await connect(async () => {
-      const inApp = inAppWallet();
-
-      if (config.strategy === 'email') {
-        if (!config.email || !config.verificationCode) {
-          throw new Error('Email and verification code required');
+    // Declare wallet variable outside try block so it's accessible in catch
+    let wallet;
+    
+    try {
+      wallet = await connect(async () => {
+        // Create in-app wallet with enhanced configuration for social logins
+        const inAppOptions: any = {};
+        
+        // For social logins, add passkeyDomain for React Native
+        if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+          inAppOptions.auth = {
+            options: [config.strategy],
+            passkeyDomain: "interspace.app", // Required for React Native
+            redirectUrl: "interspace://" // For deep linking back to app
+          };
         }
-        await inApp.connect({
-          client,
-          strategy: 'email',
-          email: config.email,
-          verificationCode: config.verificationCode,
-        });
-      } else if (config.strategy === 'phone') {
-        if (!config.phoneNumber || !config.verificationCode) {
-          throw new Error('Phone number and verification code required');
-        }
-        await inApp.connect({
-          client,
-          strategy: 'phone',
-          phoneNumber: config.phoneNumber,
-          verificationCode: config.verificationCode,
-        });
-      } else {
-        await inApp.connect({
-          client,
-          strategy: config.strategy as any,
-        });
-      }
+        
+        const inApp = inAppWallet(inAppOptions);
 
-      // Log wallet details for debugging
-      console.log('🔍 Wallet object keys:', Object.keys(inApp));
-      console.log('🔍 Wallet details:', {
-        user: (inApp as any).user,
-        _user: (inApp as any)._user,
-        getUserDetails: typeof (inApp as any).getUserDetails,
-        getUser: typeof (inApp as any).getUser,
+        if (config.strategy === 'email') {
+          if (!config.email || !config.verificationCode) {
+            throw new Error('Email and verification code required');
+          }
+          await inApp.connect({
+            client,
+            strategy: 'email',
+            email: config.email,
+            verificationCode: config.verificationCode,
+          });
+        } else if (config.strategy === 'phone') {
+          if (!config.phoneNumber || !config.verificationCode) {
+            throw new Error('Phone number and verification code required');
+          }
+          await inApp.connect({
+            client,
+            strategy: 'phone',
+            phoneNumber: config.phoneNumber,
+            verificationCode: config.verificationCode,
+          });
+        } else {
+          console.log(`🔄 Connecting with ${config.strategy} strategy...`);
+          await inApp.connect({
+            client,
+            strategy: config.strategy as any,
+          });
+        }
+
+        // Log wallet details for debugging
+        console.log('🔍 Wallet object keys:', Object.keys(inApp));
+        console.log('🔍 Wallet details:', {
+          user: (inApp as any).user,
+          _user: (inApp as any)._user,
+          getUserDetails: typeof (inApp as any).getUserDetails,
+          getUser: typeof (inApp as any).getUser,
+        });
+
+        return inApp;
       });
 
-      return inApp;
-    });
+      if (!wallet) throw new Error('Failed to connect in-app wallet');
+      
+      const account = wallet.getAccount();
+      if (!account) throw new Error('Failed to get wallet account');
 
-    if (!wallet) throw new Error('Failed to connect in-app wallet');
-    
-    const account = wallet.getAccount();
-    if (!account) throw new Error('Failed to get wallet account');
-
-    // Extract social profile for social logins
-    let socialProfile = config.socialProfile;
-    if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
-      try {
-        // Try multiple methods to get user details
-        const userDetails = (wallet as any).getUserDetails?.() || 
-                          (wallet as any).getUser?.() || 
-                          (wallet as any).user || 
-                          (wallet as any)._user;
-        
-        console.log(`🔍 Raw ${config.strategy} user details:`, userDetails);
-        
-        if (userDetails) {
-          socialProfile = {
-            id: userDetails.id || userDetails.sub || userDetails.userId || account.address,
-            email: userDetails.email,
-            name: userDetails.name || userDetails.displayName || userDetails.username,
-            picture: userDetails.picture || userDetails.avatar || userDetails.profileImage,
-            username: userDetails.username,
-            ...userDetails,
-          };
-        } else {
-          // If no user details available, create minimal profile
-          console.log(`⚠️ No user details found for ${config.strategy}, creating minimal profile`);
+      // Extract social profile for social logins
+      let socialProfile = config.socialProfile;
+      if (['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+        try {
+          // Try multiple methods to get user details
+          const userDetails = (wallet as any).getUserDetails?.() || 
+                            (wallet as any).getUser?.() || 
+                            (wallet as any).user || 
+                            (wallet as any)._user;
+          
+          console.log(`🔍 Raw ${config.strategy} user details:`, userDetails);
+          
+          if (userDetails) {
+            socialProfile = {
+              id: userDetails.id || userDetails.sub || userDetails.userId || account.address,
+              email: userDetails.email,
+              name: userDetails.name || userDetails.displayName || userDetails.username,
+              picture: userDetails.picture || userDetails.avatar || userDetails.profileImage,
+              username: userDetails.username,
+              ...userDetails,
+            };
+          } else {
+            // If no user details available, create minimal profile
+            console.log(`⚠️ No user details found for ${config.strategy}, creating minimal profile`);
+            socialProfile = {
+              id: account.address,
+              name: config.strategy,
+              strategy: config.strategy,
+            };
+          }
+          
+          console.log(`📱 Extracted ${config.strategy} profile:`, socialProfile);
+        } catch (error) {
+          console.warn('⚠️ Failed to extract social profile:', error);
+          // Create minimal profile on error
           socialProfile = {
             id: account.address,
             name: config.strategy,
             strategy: config.strategy,
           };
         }
-        
-        console.log(`📱 Extracted ${config.strategy} profile:`, socialProfile);
-      } catch (error) {
-        console.warn('⚠️ Failed to extract social profile:', error);
-        // Create minimal profile on error
-        socialProfile = {
+      }
+
+      // Always pass socialProfile for social strategies
+      if (socialProfile || ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
+        config.socialProfile = socialProfile || {
           id: account.address,
           name: config.strategy,
           strategy: config.strategy,
         };
+        console.log('📤 Passing social profile to backend:', config.socialProfile);
       }
-    }
 
-    // Always pass socialProfile for social strategies
-    if (socialProfile || ['google', 'apple', 'facebook', 'discord', 'telegram'].includes(config.strategy)) {
-      config.socialProfile = socialProfile || {
-        id: account.address,
-        name: config.strategy,
-        strategy: config.strategy,
+      return {
+        wallet,
+        authToken: `inapp_${config.strategy}_${account.address}_${Date.now()}`,
+        walletAddress: account.address,
       };
-      console.log('📤 Passing social profile to backend:', config.socialProfile);
+    } catch (error: any) {
+      console.error(`❌ ${config.strategy} authentication failed:`, error);
+      
+      // Disconnect wallet on error to clean up state
+      if (wallet) {
+        try {
+          console.log('🔌 Disconnecting wallet after error');
+          disconnect(wallet);
+        } catch (disconnectError) {
+          console.warn('⚠️ Failed to disconnect wallet after error:', disconnectError);
+        }
+      }
+      
+      // Enhance error message for common issues
+      if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
+        throw new Error(`${config.strategy} authentication was cancelled`);
+      } else if (error.message?.includes('timeout')) {
+        throw new Error(`${config.strategy} authentication timed out. Please try again`);
+      } else if (error.message?.includes('network')) {
+        throw new Error('Network error. Please check your connection and try again');
+      }
+      
+      throw error;
     }
-
-    return {
-      wallet,
-      authToken: `inapp_${config.strategy}_${account.address}_${Date.now()}`,
-      walletAddress: account.address,
-    };
   };
 
   const handleSmartProfileSetup = async (config: WalletConnectConfig, walletAddress: string, wallet?: any) => {

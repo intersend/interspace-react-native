@@ -71,33 +71,46 @@ export default function SocialAuth({ onLogin, onBack, isLoading }: SocialAuthPro
 
       console.log('🔗 Connecting with:', provider.name);
 
-      // Prepare the social authentication configuration
+      // Prepare the social authentication configuration with enhanced options
       const config: WalletConnectConfig = {
         strategy: provider.strategy,
         socialProvider: provider.strategy,
-        // Social profile will be populated after successful authentication
+        // Social profile will be populated by AuthContext after successful authentication
         socialProfile: undefined,
       };
 
-      // Attempt to connect
+      // Attempt to connect with improved error handling
       await onLogin(config);
 
       console.log('✅ Social authentication successful:', provider.name);
     } catch (error: any) {
       console.error('❌ Social authentication failed:', error);
       
-      // Show user-friendly error message
+      // Show user-friendly error message with enhanced handling
       let errorMessage = `Failed to connect with ${provider.name}`;
+      let errorTitle = 'Authentication Failed';
       
-      if (error.message?.includes('User rejected')) {
+      if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
         errorMessage = 'Authentication was cancelled';
-      } else if (error.message?.includes('Network error')) {
-        errorMessage = 'Network error. Please check your connection.';
+        errorTitle = 'Authentication Cancelled';
+      } else if (error.message?.includes('Network error') || error.message?.includes('connection')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+        errorTitle = 'Connection Error';
       } else if (error.message?.includes('Permission denied')) {
         errorMessage = 'Permission denied. Please allow access and try again.';
+        errorTitle = 'Permission Required';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Authentication request timed out. Please try again.';
+        errorTitle = 'Request Timeout';
+      } else if (error.message?.includes('not installed') || error.message?.includes('No app')) {
+        errorMessage = `${provider.name} app is not installed or configured properly.`;
+        errorTitle = 'App Not Found';
       }
       
-      Alert.alert('Authentication Failed', errorMessage);
+      // Provide more helpful guidance
+      errorMessage += '\n\nPlease try again or choose another sign-in method.';
+      
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setConnecting(false);
       setSelectedProvider(null);
