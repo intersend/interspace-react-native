@@ -21,7 +21,6 @@ import * as Haptics from 'expo-haptics';
 import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
 import { client } from '../../../constants/thirdweb';
 import AppleWalletSelector from './AppleWalletSelector';
-import AppleContactAuthModal from './AppleContactAuthModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,8 +32,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   const [hasPasskey, setHasPasskey] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Animation values
@@ -350,13 +347,9 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   };
 
   const handleEmailAuth = async () => {
+    // Navigate to email auth screen
     setShowMoreOptions(false);
-    setShowEmailModal(true);
-  };
-
-  const handlePhoneAuth = async () => {
-    setShowMoreOptions(false);
-    setShowPhoneModal(true);
+    Alert.alert('Coming Soon', 'Email authentication will be available soon');
   };
 
   const handlePhoneAuth = async () => {
@@ -399,22 +392,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
       <AppleWalletSelector
         visible={showWalletSelector}
         onClose={() => setShowWalletSelector(false)}
-        onSuccess={onAuthSuccess}
-      />
-
-      {/* Email Authentication Modal */}
-      <AppleContactAuthModal
-        visible={showEmailModal}
-        strategy="email"
-        onClose={() => setShowEmailModal(false)}
-        onSuccess={onAuthSuccess}
-      />
-
-      {/* Phone Authentication Modal */}
-      <AppleContactAuthModal
-        visible={showPhoneModal}
-        strategy="phone"
-        onClose={() => setShowPhoneModal(false)}
         onSuccess={onAuthSuccess}
       />
 
