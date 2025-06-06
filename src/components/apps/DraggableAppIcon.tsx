@@ -160,6 +160,7 @@ export function DraggableAppIcon({
         ref={panRef}
         onGestureEvent={panHandler}
         simultaneousHandlers={longPressRef}
+        waitFor={longPressRef}
         enabled={isEditMode}
       >
         <Animated.View style={[styles.container, animatedStyle]}>
