@@ -112,7 +112,6 @@ export interface SocialAccount {
     | 'coinbase'
     | 'steam'
     | 'email'
-    | 'phone'
     | 'passkey';
   username?: string;
   displayName?: string;
@@ -167,7 +166,6 @@ export interface WalletConnectConfig {
   strategy:
     | 'guest'
     | 'email'
-    | 'phone'
     | 'passkey'
     | 'wallet'
     | 'google'
@@ -184,7 +182,6 @@ export interface WalletConnectConfig {
     | 'steam'
     | 'backend';
   email?: string;
-  phoneNumber?: string;
   verificationCode?: string;
   wallet?: any;
   chain?: any;
@@ -259,7 +256,7 @@ export interface UseAuthReturn {
   login: (config: WalletConnectConfig, onSuccess?: () => void) => Promise<void>;
   logout: (onComplete?: () => void) => Promise<void>;
   refreshAuth: () => Promise<void>;
-  sendVerificationCode: (strategy: 'email' | 'phone', contact: string) => Promise<void>;
+  sendVerificationCode: (strategy: 'email', contact: string) => Promise<void>;
 }
 
 export interface UseProfilesReturn {

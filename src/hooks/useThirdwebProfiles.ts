@@ -27,11 +27,9 @@ export interface UseThirdwebProfilesReturn {
   // Link/unlink wallets
   linkWalletProfile: (walletId: string) => Promise<void>;
   
-  // Link email/phone with verification
+  // Link email with verification
   linkEmailProfile: (email: string, verificationCode: string) => Promise<void>;
-  linkPhoneProfile: (phoneNumber: string, verificationCode: string) => Promise<void>;
   sendEmailVerification: (email: string) => Promise<void>;
-  sendPhoneVerification: (phoneNumber: string) => Promise<void>;
   
   // Enhanced auth methods
   linkPasskeyProfile: () => Promise<void>;
@@ -183,23 +181,6 @@ export function useThirdwebProfiles(externalAddress?: string): UseThirdwebProfil
     }
   }, []);
 
-  // Send phone verification
-  const sendPhoneVerification = useCallback(async (phoneNumber: string) => {
-    try {
-      console.log('📱 Sending phone verification...');
-      
-      await preAuthenticate({
-        client,
-        strategy: 'phone',
-        phoneNumber,
-      });
-      
-      console.log('✅ Phone verification sent');
-    } catch (error: any) {
-      console.error('❌ Failed to send phone verification:', error);
-      throw new Error(`Failed to send phone verification: ${error.message}`);
-    }
-  }, []);
 
   // Link email profile with verification
   const linkEmailProfile = useCallback(async (email: string, verificationCode: string) => {
@@ -220,24 +201,6 @@ export function useThirdwebProfiles(externalAddress?: string): UseThirdwebProfil
     }
   }, [linkProfile]);
 
-  // Link phone profile with verification
-  const linkPhoneProfile = useCallback(async (phoneNumber: string, verificationCode: string) => {
-    try {
-      console.log('📱 Linking phone profile...');
-      
-      await linkProfile({
-        client,
-        strategy: 'phone',
-        phoneNumber,
-        verificationCode,
-      });
-      
-      console.log('✅ Phone profile linked successfully');
-    } catch (error: any) {
-      console.error('❌ Failed to link phone profile:', error);
-      throw new Error(`Failed to link phone: ${error.message}`);
-    }
-  }, [linkProfile]);
 
   // Check if device supports passkeys
   const checkPasskeySupport = useCallback(async (): Promise<boolean> => {
@@ -342,7 +305,6 @@ export function useThirdwebProfiles(externalAddress?: string): UseThirdwebProfil
       
       // Communication strategies
       'email',
-      'phone',
       
       // Advanced strategies
       'passkey',
@@ -376,11 +338,9 @@ export function useThirdwebProfiles(externalAddress?: string): UseThirdwebProfil
     // Wallet linking
     linkWalletProfile,
     
-    // Email/Phone linking
+    // Email linking
     linkEmailProfile,
-    linkPhoneProfile,
     sendEmailVerification,
-    sendPhoneVerification,
     
     // Enhanced auth methods
     linkPasskeyProfile,

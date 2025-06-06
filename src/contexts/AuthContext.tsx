@@ -202,7 +202,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         authStrategy: config.strategy,
         walletAddress,
         email: config.email,
-        phoneNumber: config.phoneNumber,
         verificationCode: config.verificationCode,
         socialProvider: config.socialProvider,
         socialProfile: config.socialProfile,
@@ -463,16 +462,6 @@ Issued At: ${payload.issued_at}`;
             client,
             strategy: 'email',
             email: config.email,
-            verificationCode: config.verificationCode,
-          });
-        } else if (config.strategy === 'phone') {
-          if (!config.phoneNumber || !config.verificationCode) {
-            throw new Error('Phone number and verification code required');
-          }
-          await inApp.connect({
-            client,
-            strategy: 'phone',
-            phoneNumber: config.phoneNumber,
             verificationCode: config.verificationCode,
           });
         } else if (config.strategy === 'passkey') {
@@ -1008,25 +997,17 @@ Issued At: ${payload.issued_at}`;
   };
 
   const sendVerificationCode = async (
-    strategy: 'email' | 'phone',
+    strategy: 'email',
     contact: string
   ): Promise<void> => {
     try {
       setError(null);
       
-      if (strategy === 'email') {
-        await preAuthenticate({
-          client,
-          strategy: 'email',
-          email: contact,
-        });
-      } else {
-        await preAuthenticate({
-          client,
-          strategy: 'phone',
-          phoneNumber: contact,
-        });
-      }
+      await preAuthenticate({
+        client,
+        strategy: 'email',
+        email: contact,
+      });
       
       console.log(`✅ Verification code sent to ${contact}`);
     } catch (error: any) {

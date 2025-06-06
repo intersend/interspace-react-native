@@ -11,7 +11,6 @@ import {
   Alert,
   Dimensions,
   Image,
-  Modal,
 } from 'react-native';
 import { Apple } from '../../../constants/AppleDesign';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,6 +20,8 @@ import * as Haptics from 'expo-haptics';
 import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
 import { client } from '../../../constants/thirdweb';
 import AppleWalletSelector from './AppleWalletSelector';
+import AppleContactAuthModal from './AppleContactAuthModal';
+import AppleBottomTray from '../ui/AppleBottomTray';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   const [hasPasskey, setHasPasskey] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Animation values
@@ -227,14 +229,8 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   );
 
   const renderMoreOptions = () => (
-    <Modal
-      visible={showMoreOptions}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowMoreOptions(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+    <AppleBottomTray visible={showMoreOptions} onClose={() => setShowMoreOptions(false)}>
+      <View style={styles.modalContent}>
           <View style={styles.modalHandle} />
           
           <View style={styles.modalHeader}>
@@ -286,11 +282,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
                 onPress={() => handleEmailAuth()}
               />
 
-              <OptionButton
-                icon="📱"
-                title="Continue with Phone"
-                onPress={() => handlePhoneAuth()}
-              />
               
               <OptionButton
                 icon="👤"
@@ -323,8 +314,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
             )}
           </ScrollView>
         </View>
-      </View>
-    </Modal>
+      </AppleBottomTray>
   );
 
   const handleSocialAuth = async (provider: string) => {
@@ -347,9 +337,8 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   };
 
   const handleEmailAuth = async () => {
-    // Navigate to email auth screen
     setShowMoreOptions(false);
-    Alert.alert('Coming Soon', 'Email authentication will be available soon');
+    setShowEmailModal(true);
   };
 
   const handlePhoneAuth = async () => {
@@ -392,6 +381,13 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
       <AppleWalletSelector
         visible={showWalletSelector}
         onClose={() => setShowWalletSelector(false)}
+        onSuccess={onAuthSuccess}
+      />
+
+      {/* Email Authentication Modal */}
+      <AppleContactAuthModal
+        visible={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
         onSuccess={onAuthSuccess}
       />
 
@@ -598,12 +594,6 @@ const styles = StyleSheet.create({
   },
   legalLink: {
     color: Apple.Colors.systemBlue,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: Apple.Colors.systemBackground,
