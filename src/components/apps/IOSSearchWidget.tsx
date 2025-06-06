@@ -44,6 +44,7 @@ const DEFAULT_RECENT_APPS = [
 export function IOSSearchWidget({ onPress, recentApps = DEFAULT_RECENT_APPS }: IOSSearchWidgetProps) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
+  const blur = useSharedValue(60);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -58,6 +59,7 @@ export function IOSSearchWidget({ onPress, recentApps = DEFAULT_RECENT_APPS }: I
       stiffness: 400,
     });
     opacity.value = withTiming(0.9, { duration: 100 });
+    blur.value = withTiming(80, { duration: 200 });
   };
 
   const handlePressOut = () => {
@@ -66,6 +68,7 @@ export function IOSSearchWidget({ onPress, recentApps = DEFAULT_RECENT_APPS }: I
       stiffness: 350,
     });
     opacity.value = withTiming(1, { duration: 100 });
+    blur.value = withTiming(60, { duration: 200 });
   };
 
   return (
@@ -80,7 +83,7 @@ export function IOSSearchWidget({ onPress, recentApps = DEFAULT_RECENT_APPS }: I
       <View style={styles.shadowLayer1}>
         <View style={styles.shadowLayer2}>
           {/* Glass morphism background */}
-          <BlurView intensity={60} tint="dark" style={styles.blurContainer}>
+          <BlurView intensity={blur.value} tint="dark" style={styles.blurContainer}>
             {/* Gradient overlay for glass effect */}
             <LinearGradient
               colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']}
