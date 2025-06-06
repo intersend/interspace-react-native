@@ -340,6 +340,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     setShowEmailModal(true);
   };
 
+
   const handleGuestAuth = async () => {
     setShowMoreOptions(false);
     setIsLoading(true);
