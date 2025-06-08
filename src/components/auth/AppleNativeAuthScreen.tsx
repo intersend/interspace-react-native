@@ -149,7 +149,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
 
       {/* Title */}
       <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={styles.title}>Sign in to Interspace</Text>
+        <Text style={styles.title}>Your Interspace</Text>
       </Animated.View>
 
       {/* Primary Actions */}

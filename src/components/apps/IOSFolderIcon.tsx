@@ -63,34 +63,38 @@ export function IOSFolderIcon({
   const scale = useSharedValue(1);
   const deleteScale = useSharedValue(0);
 
-  // Reduced jiggle animation for authentic iOS feel
+  // Apple's authentic jiggle animation with precise rotation
   useEffect(() => {
     if (isEditMode) {
-      const delay = Math.random() * 200;
+      const delay = Math.random() * 300; // More random for natural feel
       
       setTimeout(() => {
+        // Apple's exact jiggle: small angle rotation, not translation
         rotation.value = withRepeat(
           withSequence(
-            withTiming(-1, { duration: 100 }),
-            withTiming(1, { duration: 100 }),
-            withTiming(-1, { duration: 100 }),
-            withTiming(1, { duration: 100 }),
+            withTiming(-1.5, { duration: 120 }), // Apple's exact angle
+            withTiming(1.5, { duration: 240 }),
+            withTiming(-1.5, { duration: 240 }),
+            withTiming(1.5, { duration: 120 }),
           ),
           -1,
           true
         );
       }, delay);
       
+      // Apple's delete button spring animation
       deleteScale.value = withSpring(1, {
-        damping: 12,
-        stiffness: 300,
+        damping: 18, // Apple's exact spring physics
+        stiffness: 350,
+        mass: 0.8,
         overshootClamping: false,
       });
     } else {
-      rotation.value = withTiming(0, { duration: 150 });
+      rotation.value = withTiming(0, { duration: 200 });
       deleteScale.value = withSpring(0, {
-        damping: 15,
+        damping: 20,
         stiffness: 400,
+        mass: 0.7,
       });
     }
   }, [isEditMode]);
@@ -161,7 +165,7 @@ export function IOSFolderIcon({
                   
                   <Ionicons
                     name={theme.icon as any}
-                    size={7}
+                    size={14}
                     color="white"
                   />
                 </LinearGradient>
@@ -196,7 +200,7 @@ export function IOSFolderIcon({
         <View style={styles.folderOuterShadow}>
           <View style={styles.folderInnerShadow}>
             <BlurView
-              intensity={25}
+              intensity={40} // Increased blur for Apple's effect
               tint="dark"
               style={styles.folderContainer}
             >
@@ -249,12 +253,12 @@ export function IOSFolderIcon({
 
 const styles = StyleSheet.create({
   container: {
-    width: 74,
+    width: 120, // 2x2 grid size
     alignItems: 'center',
   },
   touchTarget: {
-    width: 74,
-    height: 74,
+    width: 120,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -273,15 +277,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   folderContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 13.4, // iOS superellipse
+    width: 120, // 2x regular app size
+    height: 120,
+    borderRadius: 26.8, // iOS superellipse for larger size
     overflow: 'hidden',
   },
   folderBackground: {
     flex: 1,
-    backgroundColor: 'rgba(55, 55, 60, 0.65)',
-    padding: 6,
+    backgroundColor: 'rgba(28, 28, 30, 0.72)', // Apple's exact folder background
+    padding: 16, // Proper padding for 2x2 size
   },
   glassOverlay: {
     position: 'absolute',
@@ -299,21 +303,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   miniAppContainer: {
-    width: 15,
-    height: 15,
+    width: 26,
+    height: 26,
   },
   miniApp: {
-    width: 15,
-    height: 15,
-    borderRadius: 3.5,
+    width: 26,
+    height: 26,
+    borderRadius: 5.8,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   miniAppEmpty: {
-    width: 15,
-    height: 15,
-    borderRadius: 3.5,
+    width: 26,
+    height: 26,
+    borderRadius: 5.8,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   miniGlassShine: {
@@ -329,12 +333,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 13.4,
+    borderRadius: 26.8, // Match container radius
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   folderName: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 11,
     fontWeight: '400',
     letterSpacing: 0.07,
@@ -348,30 +352,31 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     position: 'absolute',
-    top: -2,
-    left: -2,
+    top: -5, // Adjusted for larger folder
+    left: -5,
   },
   deleteButtonOuter: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    elevation: 3,
   },
   deleteButtonGradient: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22, // Apple's exact size for folders
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Apple.Colors.systemBackground,
+    borderWidth: 2, // Proper border width
+    borderColor: '#FFFFFF', // Pure white border
   },
   deleteButtonText: {
     color: 'white',
-    fontSize: 13,
-    fontWeight: '300',
+    fontSize: 13, // Proper size for folder delete
+    fontWeight: '600', // Bolder for better visibility
     lineHeight: 13,
-    marginTop: -1,
+    marginTop: -0.5,
+    textAlign: 'center',
   },
 });

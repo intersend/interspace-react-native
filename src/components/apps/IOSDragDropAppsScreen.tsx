@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   StatusBar,
   Dimensions,
-  Alert,
   TouchableOpacity,
   Text,
   TouchableWithoutFeedback,
@@ -14,34 +12,30 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Apple } from '@/constants/AppleDesign';
-import { DraggableAppIcon } from '@/src/components/apps/DraggableAppIcon';
-// Icon components are used within DraggableAppIcon
+import { IOSAppIcon } from '@/src/components/apps/IOSAppIcon';
+import { IOSFolderIcon } from '@/src/components/apps/IOSFolderIcon';
 import { IOSSearchWidget } from '@/src/components/apps/IOSSearchWidget';
 import { IOSFolderModal } from '@/src/components/apps/IOSFolderModal';
-import { IOSSpotlightModal } from '@/src/components/apps/IOSSpotlightModal';
+import { IOSSearchScreen } from '@/src/components/apps/IOSSearchScreen';
 import { SafariBrowser } from '@/src/components/apps/SafariBrowser';
+import { IOSDeleteConfirmation } from '@/src/components/apps/IOSDeleteConfirmation';
+import { IOSGridLayoutManager, GRID_CONFIG } from '@/src/components/apps/IOSGridLayoutManager';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
   runOnJS,
-  withSequence,
-  withDelay,
+  useAnimatedScrollHandler,
+  useAnimatedRef,
+  scrollTo,
+  interpolate,
+  Extrapolate,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 const { width, height } = Dimensions.get('window');
-const ICONS_PER_ROW = 4;
-const ROWS_PER_PAGE = 5; // mimic iOS grid height
-const ICONS_PER_PAGE = ICONS_PER_ROW * ROWS_PER_PAGE;
-const ICON_SIZE = 74;
-const HORIZONTAL_PADDING = 20;
-const ICON_SPACING = (width - HORIZONTAL_PADDING * 2 - ICON_SIZE * ICONS_PER_ROW) / (ICONS_PER_ROW - 1);
-const VERTICAL_SPACING = 30;
-const DRAG_SCALE = 1.1;
-const DROP_SCALE = 1.2;
 
 interface App {
   id: string;
@@ -58,21 +52,6 @@ interface Folder {
   color: string;
   position: number;
   apps: App[];
-  isOpen?: boolean;
-}
-
-interface GridPosition {
-  page: number;
-  row: number;
-  col: number;
-  x: number;
-  y: number;
-}
-
-interface DragState {
-  item: App | Folder | null;
-  originalPosition: number;
-  isActive: boolean;
 }
 
 export default function IOSDragDropAppsScreen() {
@@ -81,48 +60,51 @@ export default function IOSDragDropAppsScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [browserVisible, setBrowserVisible] = useState(false);
   const [browserUrl, setBrowserUrl] = useState('');
-  const [openingAppId, setOpeningAppId] = useState<string | null>(null);
-  const [spotlightVisible, setSpotlightVisible] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
   const [openFolder, setOpenFolder] = useState<Folder | null>(null);
   const [folderPosition, setFolderPosition] = useState({ x: 0, y: 0 });
-  const [dragState, setDragState] = useState<DragState>({
-    item: null,
-    originalPosition: 0,
-    isActive: false,
-  });
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [dropTargetIndex, setDropTargetIndex] = useState<number>(-1);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    visible: boolean;
+    itemId: string;
+    itemName: string;
+    isFolder: boolean;
+  }>({
+    visible: false,
+    itemId: '',
+    itemName: '',
+    isFolder: false,
+  });
 
-  // Grid positions for drag & drop
-  const gridPositions = useRef<GridPosition[]>([]);
-  const gridItems = useRef<(App | Folder)[]>([]);
-  const scrollViewRef = useRef<ScrollView>(null);
+  // Grid layout manager
+  const gridManager = useMemo(() => new IOSGridLayoutManager(), []);
+  const [gridPositions, setGridPositions] = useState<Map<string, any>>(new Map());
+  const [totalPages, setTotalPages] = useState(1);
+  
+  // Drag state
+  const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'app' | 'folder' } | null>(null);
+  const dragPosition = useSharedValue({ x: 0, y: 0 });
+  const dragScale = useSharedValue(1);
+  const dragOpacity = useSharedValue(1);
   
   // Animation values
-  const browserScale = useSharedValue(0);
-  const browserOpacity = useSharedValue(0);
-  const backgroundBlur = useSharedValue(0);
+  const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollX = useSharedValue(0);
+  const pageIndicatorOpacity = useSharedValue(0.6);
   const widgetOpacity = useSharedValue(1);
 
   // Initialize with mock data
   useEffect(() => {
     const mockApps: App[] = [
-      // Standalone apps
       { id: 'app-1', name: 'Aave', url: 'https://app.aave.com', position: 0 },
       { id: 'app-2', name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz', position: 1 },
       { id: 'app-3', name: 'Jumper', url: 'https://jumper.exchange', position: 2 },
-      
-      // Apps in DeFi folder
       { id: 'app-4', name: 'Uniswap', url: 'https://app.uniswap.org', position: 0, folderId: 'folder-defi' },
       { id: 'app-5', name: 'Compound', url: 'https://app.compound.finance', position: 1, folderId: 'folder-defi' },
       { id: 'app-6', name: 'Curve', url: 'https://curve.fi', position: 2, folderId: 'folder-defi' },
       { id: 'app-7', name: 'SushiSwap', url: 'https://app.sushi.com', position: 3, folderId: 'folder-defi' },
       { id: 'app-8', name: 'Balancer', url: 'https://app.balancer.fi', position: 4, folderId: 'folder-defi' },
       { id: 'app-9', name: '1inch', url: 'https://app.1inch.io', position: 5, folderId: 'folder-defi' },
-      
-      // More standalone apps
       { id: 'app-10', name: 'OpenSea', url: 'https://opensea.io', position: 4 },
       { id: 'app-11', name: 'Blur', url: 'https://blur.io', position: 5 },
       { id: 'app-12', name: 'dYdX', url: 'https://dydx.exchange', position: 6 },
@@ -147,100 +129,37 @@ export default function IOSDragDropAppsScreen() {
     setFolders(mockFolders);
   }, []);
 
-  const recalcPositions = (
-    appsList: App[],
-    folderList: Folder[],
-  ): { apps: App[]; folders: Folder[] } => {
-    let idx = 0;
-    const sortedFolders = folderList
-      .sort((a, b) => a.position - b.position)
-      .map((f) => ({ ...f, position: idx++ }));
-    const updatedApps = appsList.map((a) => {
-      if (a.folderId) return a;
-      const pos = idx++;
-      return { ...a, position: pos };
-    });
-    return { apps: updatedApps, folders: sortedFolders };
-  };
-
-  const addAppToFolder = (app: App, folder: Folder) => {
-    const updatedFolders = folders.map((f) =>
-      f.id === folder.id
-        ? { ...f, apps: [...f.apps, { ...app, folderId: folder.id, position: f.apps.length }] }
-        : f,
-    );
-    const updatedApps = apps.map((a) =>
-      a.id === app.id ? { ...a, folderId: folder.id } : a,
-    );
-    const { apps: resApps, folders: resFolders } = recalcPositions(updatedApps, updatedFolders);
-    setApps(resApps);
-    setFolders(resFolders);
-  };
-
-  const createFolderFromApps = (dragApp: App, targetApp: App) => {
-    const newFolderId = `folder-${Date.now()}`;
-    const newFolder: Folder = {
-      id: newFolderId,
-      name: 'Folder',
-      color: Apple.Colors.systemBlue,
-      position: targetApp.position,
-      apps: [
-        { ...targetApp, folderId: newFolderId, position: 0 },
-        { ...dragApp, folderId: newFolderId, position: 1 },
-      ],
-    };
-
-    const remainingApps = apps.filter((a) => a.id !== targetApp.id && a.id !== dragApp.id);
-    const updatedApps = [
-      ...remainingApps,
-      { ...targetApp, folderId: newFolderId },
-      { ...dragApp, folderId: newFolderId },
-    ];
-    const updatedFolders = [...folders, newFolder];
-    const { apps: resApps, folders: resFolders } = recalcPositions(updatedApps, updatedFolders);
-    setApps(resApps);
-    setFolders(resFolders);
-  };
-
-  // Calculate grid positions and pages
+  // Update grid positions when apps/folders change
   useEffect(() => {
     const standaloneApps = apps.filter(app => !app.folderId);
     const allItems = [...standaloneApps, ...folders].sort((a, b) => a.position - b.position);
-
-    const positions: GridPosition[] = [];
-
-    const pages = Math.max(1, Math.ceil(allItems.length / ICONS_PER_PAGE));
-    setTotalPages(pages);
-
-    allItems.forEach((item, index) => {
-      const page = Math.floor(index / ICONS_PER_PAGE);
-      const indexInPage = index % ICONS_PER_PAGE;
-      const row = Math.floor(indexInPage / ICONS_PER_ROW);
-      const col = indexInPage % ICONS_PER_ROW;
-      positions.push({
-        page,
-        row,
-        col,
-        x: page * width + HORIZONTAL_PADDING + col * (ICON_SIZE + ICON_SPACING),
-        y: 100 + row * (ICON_SIZE + VERTICAL_SPACING),
-      });
-    });
-
-    gridPositions.current = positions;
-    gridItems.current = allItems;
-  }, [apps, folders]);
+    
+    const items = allItems.map(item => ({
+      id: item.id,
+      type: 'apps' in item ? 'folder' : 'app',
+    }));
+    
+    const positions = gridManager.reorganizeItems(items as any);
+    setGridPositions(positions);
+    setTotalPages(gridManager.getPageCount());
+  }, [apps, folders, gridManager]);
 
   // Animate widget opacity in edit mode
   useEffect(() => {
     widgetOpacity.value = withTiming(isEditMode ? 0.3 : 1, { duration: 200 });
   }, [isEditMode]);
 
-  // Configure layout animation for smooth transitions
-  useEffect(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  }, [apps, folders]);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x;
+      pageIndicatorOpacity.value = withTiming(1, { duration: 150 });
+    },
+    onEndDrag: () => {
+      pageIndicatorOpacity.value = withTiming(0.6, { duration: 300 });
+    },
+  });
 
-  const handleLongPress = useCallback(() => {
+  const handleLongPress = useCallback((itemId: string) => {
     if (!isEditMode) {
       hapticTrigger('impactMedium');
       setIsEditMode(true);
@@ -252,404 +171,228 @@ export default function IOSDragDropAppsScreen() {
     setIsEditMode(false);
   }, []);
 
-  const handleEmptySpacePress = useCallback(() => {
-    if (isEditMode && !dragState.isActive) {
-      handleDonePress();
-    }
-  }, [isEditMode, dragState.isActive, handleDonePress]);
-
-  const handleAppPress = useCallback(
-    (app: App, position: { x: number; y: number }) => {
-      if (isEditMode || dragState.isActive) return;
-
-      hapticTrigger('impactLight');
-      setOpeningAppId(app.id);
-      setBrowserUrl(app.url);
-
-      browserScale.value = 0.85;
-      browserOpacity.value = 0;
-
-      browserScale.value = withTiming(1, { duration: 250 });
-      browserOpacity.value = withTiming(1, { duration: 250 });
-      backgroundBlur.value = withTiming(10, { duration: 250 });
-
-      setTimeout(() => {
-        setBrowserVisible(true);
-        setOpeningAppId(null);
-      }, 200);
-    },
-    [isEditMode, dragState.isActive],
-  );
+  const handleAppPress = useCallback((app: App) => {
+    if (isEditMode || draggedItem) return;
+    
+    hapticTrigger('impactLight');
+    setBrowserUrl(app.url);
+    setBrowserVisible(true);
+  }, [isEditMode, draggedItem]);
 
   const handleFolderPress = useCallback((folder: Folder, position: { x: number; y: number }) => {
-    if (isEditMode || dragState.isActive) return;
+    if (isEditMode || draggedItem) return;
     
     hapticTrigger('impactLight');
     setFolderPosition(position);
     setOpenFolder(folder);
-  }, [isEditMode, dragState.isActive]);
+  }, [isEditMode, draggedItem]);
 
   const handleDeleteApp = useCallback((appId: string) => {
-    hapticTrigger('notificationWarning');
-    Alert.alert(
-      'Delete App',
-      'Remove from Home Screen?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setApps(prev => prev.filter(app => app.id !== appId));
-          },
-        },
-      ]
-    );
-  }, []);
+    const app = apps.find(a => a.id === appId);
+    if (app) {
+      setDeleteConfirmation({
+        visible: true,
+        itemId: appId,
+        itemName: app.name,
+        isFolder: false,
+      });
+    }
+  }, [apps]);
 
   const handleDeleteFolder = useCallback((folderId: string) => {
-    hapticTrigger('notificationWarning');
-    Alert.alert(
-      'Delete Folder',
-      'This will remove the folder and move all apps to the home screen.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            // Move folder apps to main screen
-            setApps(prev => 
-              prev.map(app => 
-                app.folderId === folderId 
-                  ? { ...app, folderId: undefined } 
-                  : app
-              )
-            );
-            setFolders(prev => prev.filter(folder => folder.id !== folderId));
-          },
-        },
-      ]
-    );
-  }, []);
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+      setDeleteConfirmation({
+        visible: true,
+        itemId: folderId,
+        itemName: folder.name,
+        isFolder: true,
+      });
+    }
+  }, [folders]);
 
   const handleSearchPress = useCallback(() => {
     hapticTrigger('impactLight');
-    setSpotlightVisible(true);
+    setSearchVisible(true);
   }, []);
 
-  const handleSearchSubmit = useCallback(
-    (text: string) => {
-      setSpotlightVisible(false);
-      if (!text) return;
-      let finalUrl = text;
-      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-        finalUrl = 'https://' + finalUrl;
-      }
-
-      browserScale.value = 0.85;
-      browserOpacity.value = 0;
-
-      browserScale.value = withTiming(1, { duration: 250 });
-      browserOpacity.value = withTiming(1, { duration: 250 });
-      backgroundBlur.value = withTiming(10, { duration: 250 });
-
-      setBrowserUrl(finalUrl);
-      setBrowserVisible(true);
-    },
-    [],
-  );
-
-  const handleBrowserClose = useCallback(() => {
-    // Animate browser closing
-    browserScale.value = withTiming(0, { duration: 200 });
-    browserOpacity.value = withTiming(0, { duration: 200 });
-    backgroundBlur.value = withTiming(0, { duration: 200 });
+  const handleSearchSubmit = useCallback((text: string) => {
+    setSearchVisible(false);
+    if (!text) return;
     
-    setTimeout(() => setBrowserVisible(false), 200);
+    let finalUrl = text;
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    
+    setBrowserUrl(finalUrl);
+    setBrowserVisible(true);
   }, []);
 
-  // Drag & drop handlers
-  const handleDragStart = useCallback((item: App | Folder, index: number) => {
-    setDragState({
-      item,
-      originalPosition: index,
-      isActive: true,
-    });
+  const handleDragStart = useCallback((itemId: string, type: 'app' | 'folder') => {
+    setDraggedItem({ id: itemId, type });
+    dragScale.value = withSpring(1.1, { damping: 15, stiffness: 350 });
+    dragOpacity.value = withTiming(0.9, { duration: 100 });
+    hapticTrigger('impactMedium');
   }, []);
 
   const handleDragMove = useCallback((x: number, y: number) => {
-    setDragPosition({ x, y });
-    
-    // Find closest grid position
-    let closestIndex = -1;
-    let minDistance = Infinity;
-    
-    gridPositions.current.forEach((pos, index) => {
-      const distance = Math.sqrt(
-        Math.pow(x - (pos.x + ICON_SIZE / 2), 2) +
-        Math.pow(y - (pos.y + ICON_SIZE / 2), 2)
-      );
-      
-      if (distance < minDistance && distance < ICON_SIZE * 0.75) {
-        minDistance = distance;
-        closestIndex = index;
-      }
-    });
-    
-    setDropTargetIndex(closestIndex);
+    dragPosition.value = { x, y };
   }, []);
 
-  const handleDragEnd = useCallback((x: number, y: number) => {
-    if (dropTargetIndex >= 0 && dragState.item) {
-      const target = gridItems.current[dropTargetIndex];
-      if (target && !('apps' in dragState.item)) {
-        if (target && 'apps' in target) {
-          addAppToFolder(dragState.item as App, target as Folder);
-        } else if ((target as App).id !== (dragState.item as App).id) {
-          createFolderFromApps(dragState.item as App, target as App);
-        } else {
-          handleItemDrop(dragState.item, dropTargetIndex);
-        }
-      } else {
-        handleItemDrop(dragState.item, dropTargetIndex);
-      }
+  const handleDragEnd = useCallback(() => {
+    if (!draggedItem) return;
+    
+    const dropTarget = gridManager.findDropTarget(
+      dragPosition.value.x,
+      dragPosition.value.y
+    );
+    
+    if (dropTarget) {
+      // Handle drop logic
+      hapticTrigger('impactLight');
     }
     
-    setDragState({
-      item: null,
-      originalPosition: 0,
-      isActive: false,
-    });
-    setDropTargetIndex(-1);
-  }, [dropTargetIndex, dragState.item]);
+    dragScale.value = withSpring(1, { damping: 15, stiffness: 350 });
+    dragOpacity.value = withTiming(1, { duration: 100 });
+    setDraggedItem(null);
+  }, [draggedItem, gridManager]);
 
-  const handleItemDrop = (item: App | Folder, newPosition: number) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  const pageIndicatorStyle = useAnimatedStyle(() => ({
+    opacity: pageIndicatorOpacity.value,
+  }));
 
-    // Collect visible items sorted by position
-    const standaloneApps = apps.filter((a) => !a.folderId);
-    const allItems: (App | Folder)[] = [...standaloneApps, ...folders].sort(
-      (a, b) => a.position - b.position,
-    );
+  const widgetAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: widgetOpacity.value,
+  }));
 
-    const currentIndex = allItems.findIndex((i) => i.id === item.id);
-    if (currentIndex === -1) return;
-
-    const clampedPosition = Math.max(0, Math.min(newPosition, allItems.length - 1));
-
-    allItems.splice(currentIndex, 1);
-    allItems.splice(clampedPosition, 0, item);
-
-    const updatedApps = [...apps];
-    const updatedFolders = [...folders];
-
-    allItems.forEach((it, idx) => {
-      if ('apps' in it) {
-        const fIdx = updatedFolders.findIndex((f) => f.id === it.id);
-        if (fIdx >= 0) updatedFolders[fIdx] = { ...updatedFolders[fIdx], position: idx };
-      } else {
-        const aIdx = updatedApps.findIndex((a) => a.id === it.id);
-        if (aIdx >= 0) updatedApps[aIdx] = { ...updatedApps[aIdx], position: idx };
-      }
-    });
-
-    setApps(updatedApps.sort((a, b) => a.position - b.position));
-    setFolders(updatedFolders.sort((a, b) => a.position - b.position));
-  };
-
-  const backgroundAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(backgroundBlur.value, [0, 10], [1, 0.3]),
-    };
-  });
-
-  const widgetAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: widgetOpacity.value,
-    };
-  });
-
-
-  const renderGrid = (pageIndex: number) => {
-    // Get all items (apps not in folders + folders)
-    const standaloneApps = apps.filter(app => !app.folderId);
-    const allItems = [...standaloneApps, ...folders].sort((a, b) => a.position - b.position);
-
-    const pageItems = allItems.slice(
-      pageIndex * ICONS_PER_PAGE,
-      (pageIndex + 1) * ICONS_PER_PAGE,
-    );
-
-    const rows = [];
-    for (let i = 0; i < ROWS_PER_PAGE; i++) {
-      const start = i * ICONS_PER_ROW;
-      const rowItems = pageItems.slice(start, start + ICONS_PER_ROW);
-      rows.push(
-        <View key={`row-${i}`} style={styles.row}>
-          {rowItems.map((item, indexInRow) => {
-            const isFolder = 'apps' in item;
-            const itemIndex = pageIndex * ICONS_PER_PAGE + i * ICONS_PER_ROW + indexInRow;
-            let position = gridPositions.current[itemIndex];
-            if (!position) {
-              const row = Math.floor((itemIndex % ICONS_PER_PAGE) / ICONS_PER_ROW);
-              const col = itemIndex % ICONS_PER_ROW;
-              position = {
-                page: pageIndex,
-                row,
-                col,
-                x:
-                  pageIndex * width +
-                  HORIZONTAL_PADDING +
-                  col * (ICON_SIZE + ICON_SPACING),
-                y: 100 + row * (ICON_SIZE + VERTICAL_SPACING),
-              };
-            }
-            const isDragging = dragState.isActive && dragState.item?.id === item.id;
-
-            return (
-              <DraggableAppIcon
-                key={item.id}
-                item={item}
-                isFolder={isFolder}
-                isEditMode={isEditMode}
-                position={{ x: position.x, y: position.y }}
-                index={itemIndex}
-                onPress={() =>
-                  isFolder
-                    ? handleFolderPress(item as Folder, {
-                        x: position.x + ICON_SIZE / 2,
-                        y: position.y + ICON_SIZE / 2,
-                      })
-                    : handleAppPress(item as App, {
-                        x: position.x + ICON_SIZE / 2,
-                        y: position.y + ICON_SIZE / 2,
-                      })
-                }
-                onLongPress={handleLongPress}
-                onDelete={() => (isFolder ? handleDeleteFolder(item.id) : handleDeleteApp(item.id))}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                isDragging={isDragging}
-                isDropTarget={dropTargetIndex === itemIndex}
-                isOpening={openingAppId === item.id}
-              />
-            );
-          })}
-          {/* Fill empty slots in row */}
-          {Array.from({ length: ICONS_PER_ROW - rowItems.length }).map((_, index) => (
-            <View key={`empty-${i}-${index}`} style={styles.emptySlot} />
-          ))}
-        </View>
-      );
-    }
+  const renderItem = (itemId: string, position: any) => {
+    const app = apps.find(a => a.id === itemId);
+    const folder = folders.find(f => f.id === itemId);
     
-    return rows;
+    if (!app && !folder) return null;
+    
+    const isFolder = !!folder;
+    const item = folder || app!;
+    
+    return (
+      <View
+        key={itemId}
+        style={[
+          styles.itemContainer,
+          {
+            position: 'absolute',
+            left: position.x,
+            top: position.y,
+            width: isFolder ? GRID_CONFIG.FOLDER_SIZE : GRID_CONFIG.ICON_SIZE,
+            height: isFolder ? GRID_CONFIG.FOLDER_SIZE : GRID_CONFIG.ICON_SIZE,
+          },
+        ]}
+      >
+        {isFolder ? (
+          <IOSFolderIcon
+            id={folder.id}
+            name={folder.name}
+            apps={folder.apps}
+            isEditMode={isEditMode}
+            onPress={() => handleFolderPress(folder, position)}
+            onLongPress={() => handleLongPress(folder.id)}
+            onDelete={() => handleDeleteFolder(folder.id)}
+          />
+        ) : (
+          <IOSAppIcon
+            id={app!.id}
+            name={app!.name}
+            url={app!.url}
+            iconUrl={app!.iconUrl}
+            isEditMode={isEditMode}
+            onPress={() => handleAppPress(app!)}
+            onLongPress={() => handleLongPress(app!.id)}
+            onDelete={() => handleDeleteApp(app!.id)}
+          />
+        )}
+      </View>
+    );
   };
-
-  // Get recent apps for the widget
-  const recentApps = [
-    { name: 'Aave', gradient: ['#B6509E', '#8B3A7A', '#6B2A5A'], icon: 'flash' },
-    { name: 'Uniswap', gradient: ['#FF007A', '#D6005F', '#B30050'], icon: 'git-network' },
-    { name: 'Jumper', gradient: ['#7B3FF2', '#5E2FBF', '#4A238C'], icon: 'swap-horizontal' },
-    { name: 'Hyperliquid', gradient: ['#1a1a1a', '#000000', '#0a0a0a'], icon: 'trending-up' },
-  ];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* iOS 17 style gradient background */}
+      {/* Background */}
       <LinearGradient
-        colors={['#8e8e93', '#3a3a3c', '#000000']}
+        colors={['#1c1c1e', '#000000', '#000000']}
         style={styles.backgroundGradient}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        locations={[0, 0.4, 1]}
       />
       
-      {/* Subtle mesh gradient overlay */}
-      <LinearGradient
-        colors={['rgba(88,86,214,0.12)', 'rgba(180,80,158,0.12)', 'transparent']}
-        style={styles.meshGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0.6 }}
-      />
-      
-      {/* Noise texture overlay for authentic iOS feel */}
-      <View style={styles.noiseOverlay} />
-      
-      <Animated.View style={[styles.contentWrapper, backgroundAnimatedStyle]}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          {/* Done button in edit mode */}
-          {isEditMode && (
-            <View style={styles.editModeHeader}>
-              <View style={styles.editModeTitle} />
-              <TouchableOpacity onPress={handleDonePress} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Edit Mode Header */}
+        {isEditMode && (
+          <View style={styles.editModeHeader}>
+            <TouchableOpacity onPress={handleDonePress} style={styles.doneButton}>
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Search Widget */}
+        <Animated.View style={widgetAnimatedStyle}>
+          <IOSSearchWidget onPress={handleSearchPress} />
+        </Animated.View>
+        
+        {/* Apps Grid */}
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ width: width * totalPages }}
+        >
+          {Array.from({ length: totalPages }).map((_, pageIndex) => (
+            <View key={pageIndex} style={{ width, height }}>
+              {Array.from(gridPositions.entries()).map(([itemId, position]) => {
+                if (position.page === pageIndex) {
+                  return renderItem(itemId, position);
+                }
+                return null;
+              })}
             </View>
-          )}
-          
-          <TouchableWithoutFeedback onPress={handleEmptySpacePress}>
-            <View style={styles.touchableContainer}>
-              <ScrollView
-                ref={scrollViewRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const page = Math.round(e.nativeEvent.contentOffset.x / width);
-                  setCurrentPage(page);
-                }}
-                scrollEnabled={!isEditMode || !dragState.isActive}
-              >
-                {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                  <View key={`page-${pageIndex}`} style={{ width }}>
-                    <View style={styles.gridContainer}>{renderGrid(pageIndex)}</View>
-                  </View>
-                ))}
-              </ScrollView>
-
-              <View style={styles.pageIndicator}>
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <View
-                    key={idx}
-                    style={[styles.pageDot, idx === currentPage && styles.activePageDot]}
-                  />
-                ))}
-              </View>
-              
-              {/* Search Widget at bottom */}
-              <Animated.View style={[styles.widgetContainer, widgetAnimatedStyle]}>
-                <IOSSearchWidget 
-                  onPress={handleSearchPress}
-                  recentApps={recentApps}
-                />
-              </Animated.View>
-            </View>
-          </TouchableWithoutFeedback>
-        </SafeAreaView>
-      </Animated.View>
+          ))}
+        </Animated.ScrollView>
+        
+        {/* Page Indicators */}
+        {totalPages > 1 && (
+          <Animated.View style={[styles.pageIndicator, pageIndicatorStyle]}>
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.pageDot,
+                  currentPage === idx && styles.activePageDot,
+                ]}
+              />
+            ))}
+          </Animated.View>
+        )}
+      </SafeAreaView>
       
-      {/* Safari Browser Modal */}
+      {/* Modals */}
       <SafariBrowser
         visible={browserVisible}
         initialUrl={browserUrl}
-        onClose={handleBrowserClose}
-      />
-
-      {/* Spotlight Search Modal */}
-      <IOSSpotlightModal
-        visible={spotlightVisible}
-        onClose={() => setSpotlightVisible(false)}
-        onSubmit={handleSearchSubmit}
+        onClose={() => setBrowserVisible(false)}
       />
       
-      {/* Folder Modal */}
+      <IOSSearchScreen
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        onSearch={handleSearchSubmit}
+        onAppSelect={() => {}}
+      />
+      
       {openFolder && (
         <IOSFolderModal
           visible={!!openFolder}
@@ -668,6 +411,31 @@ export default function IOSDragDropAppsScreen() {
           sourcePosition={folderPosition}
         />
       )}
+      
+      <IOSDeleteConfirmation
+        visible={deleteConfirmation.visible}
+        appName={deleteConfirmation.itemName}
+        isFolder={deleteConfirmation.isFolder}
+        onCancel={() => setDeleteConfirmation(prev => ({ ...prev, visible: false }))}
+        onDelete={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          
+          if (deleteConfirmation.isFolder) {
+            setApps(prev => 
+              prev.map(app => 
+                app.folderId === deleteConfirmation.itemId 
+                  ? { ...app, folderId: undefined } 
+                  : app
+              )
+            );
+            setFolders(prev => prev.filter(folder => folder.id !== deleteConfirmation.itemId));
+          } else {
+            setApps(prev => prev.filter(app => app.id !== deleteConfirmation.itemId));
+          }
+          
+          setDeleteConfirmation(prev => ({ ...prev, visible: false }));
+        }}
+      />
     </View>
   );
 }
@@ -675,7 +443,7 @@ export default function IOSDragDropAppsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Apple.Colors.systemBackground,
+    backgroundColor: '#000',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -684,38 +452,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  meshGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.7,
-    opacity: 0.6,
-  },
-  noiseOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.03,
-    backgroundColor: '#ffffff',
-  },
-  contentWrapper: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
   },
   editModeHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 20,
     paddingVertical: 10,
-  },
-  editModeTitle: {
-    flex: 1,
   },
   doneButton: {
     paddingVertical: 5,
@@ -726,34 +470,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Apple.Colors.systemBlue,
   },
-  touchableContainer: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  gridContainer: {
-    paddingHorizontal: HORIZONTAL_PADDING,
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: VERTICAL_SPACING,
-    justifyContent: 'space-between',
-  },
-  iconWrapper: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-  },
-  draggingPlaceholder: {
-    opacity: 0.3,
-  },
-  emptySlot: {
-    width: ICON_SIZE,
+  itemContainer: {
+    position: 'absolute',
   },
   pageIndicator: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
   },
   pageDot: {
     width: 6,
@@ -764,17 +490,5 @@ const styles = StyleSheet.create({
   },
   activePageDot: {
     backgroundColor: 'rgba(255,255,255,0.8)',
-  },
-  widgetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 95, // Account for tab bar
-  },
-  draggingItem: {
-    position: 'absolute',
-    width: ICON_SIZE,
-    height: ICON_SIZE,
   },
 });

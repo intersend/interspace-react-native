@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableWithoutFeedback,
   Dimensions,
-  ScrollView,
   Modal,
   TextInput,
+  Pressable,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -16,6 +19,9 @@ import Animated, {
   withTiming,
   interpolate,
   runOnJS,
+  withSequence,
+  useAnimatedScrollHandler,
+  Extrapolate,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';

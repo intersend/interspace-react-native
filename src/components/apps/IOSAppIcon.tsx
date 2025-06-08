@@ -305,7 +305,7 @@ export function IOSAppIcon({
 
 const styles = StyleSheet.create({
   container: {
-    width: 74,
+    width: 60,
     alignItems: 'center',
   },
   touchTarget: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   appName: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 11,
     fontWeight: '400',
     letterSpacing: 0.07,
