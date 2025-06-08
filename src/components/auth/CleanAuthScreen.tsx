@@ -8,25 +8,19 @@ import {
   Animated,
   TouchableOpacity,
   ScrollView,
-  Alert,
-  Platform,
 } from 'react-native';
 import { Apple } from '../../../constants/AppleDesign';
 import AppleButton from '../ui/AppleButton';
 import AppleTextInput from '../ui/AppleTextInput';
-import FloatingTestWallet from '../testing/FloatingTestWallet';
-import SIWEWalletSelector from './SIWEWalletSelector';
 import { useAuth } from '../../hooks/useAuth';
-import { useTestWallet } from '../../hooks/useTestWallet';
 import { WalletConnectConfig } from '../../types';
 import * as Haptics from 'expo-haptics';
-import { createWallet } from 'thirdweb/wallets';
 
 interface CleanAuthScreenProps {
   onAuthSuccess?: () => void;
 }
 
-type AuthStep = 'choice' | 'email' | 'social' | 'wallet' | 'verification';
+type AuthStep = 'choice' | 'email' | 'verification';
 
 interface SocialProvider {
   id: string;
@@ -34,18 +28,7 @@ interface SocialProvider {
   icon: string;
   strategy:
     | 'google'
-    | 'apple'
-    | 'facebook'
-    | 'x'
-    | 'discord'
-    | 'telegram'
-    | 'twitch'
-    | 'farcaster'
-    | 'github'
-    | 'line'
-    | 'coinbase'
-    | 'steam'
-    | 'backend';
+    | 'apple';
   primary?: boolean;
 }
 
@@ -63,112 +46,8 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
     icon: '🔍',
     strategy: 'google',
   },
-  {
-    id: 'telegram',
-    name: 'Continue with Telegram',
-    icon: '✈️',
-    strategy: 'telegram',
-  },
-  {
-    id: 'facebook',
-    name: 'Continue with Facebook',
-    icon: '📘',
-    strategy: 'facebook',
-  },
-  {
-    id: 'x',
-    name: 'Continue with X',
-    icon: '𝕏',
-    strategy: 'x',
-  },
-  {
-    id: 'discord',
-    name: 'Continue with Discord',
-    icon: '🎮',
-    strategy: 'discord',
-  },
-  {
-    id: 'twitch',
-    name: 'Continue with Twitch',
-    icon: '📺',
-    strategy: 'twitch',
-  },
-  {
-    id: 'farcaster',
-    name: 'Continue with Farcaster',
-    icon: '📡',
-    strategy: 'farcaster',
-  },
-  {
-    id: 'github',
-    name: 'Continue with GitHub',
-    icon: '🐱',
-    strategy: 'github',
-  },
-  {
-    id: 'line',
-    name: 'Continue with Line',
-    icon: '💚',
-    strategy: 'line',
-  },
-  {
-    id: 'coinbase',
-    name: 'Continue with Coinbase',
-    icon: '💙',
-    strategy: 'coinbase',
-  },
-  {
-    id: 'steam',
-    name: 'Continue with Steam',
-    icon: '🎮',
-    strategy: 'steam',
-  },
-  {
-    id: 'backend',
-    name: 'Continue with Backend',
-    icon: '🔑',
-    strategy: 'backend',
-  },
 ];
 
-interface WalletOption {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  walletId: string;
-}
-
-const WALLET_OPTIONS: WalletOption[] = [
-  {
-    id: 'metamask',
-    name: 'MetaMask',
-    icon: '🦊',
-    description: 'Connect using MetaMask',
-    walletId: 'io.metamask',
-  },
-  {
-    id: 'coinbase',
-    name: 'Coinbase Wallet',
-    icon: '💙',
-    description: 'Connect using Coinbase Wallet',
-    walletId: 'com.coinbase.wallet',
-  },
-  {
-    id: 'rainbow',
-    name: 'Rainbow',
-    icon: '🌈',
-    description: 'Connect using Rainbow',
-    walletId: 'me.rainbow',
-  },
-  {
-    id: 'walletconnect',
-    name: 'WalletConnect (Enter URI)',
-    icon: '🔗',
-    description: 'Use manual WalletConnect URI',
-    walletId: 'walletConnect',
-  },
-];
 
 export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps) {
   const [currentStep, setCurrentStep] = useState<AuthStep>('choice');
@@ -177,7 +56,6 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSIWESelector, setShowSIWESelector] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -186,12 +64,9 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
 
   const {
     login,
-    loginWithWallet,
-    loginWithWalletConnect,
     isLoading: authLoading,
     sendVerificationCode,
   } = useAuth();
-  const testWallet = useTestWallet();
 
   useEffect(() => {
     // Initial animation ONLY - no auto-login
@@ -276,46 +151,6 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
     }
   };
 
-  const handleWalletConnect = async (wallet: WalletOption) => {
-    try {
-      console.log('👛 User clicked wallet connect:', wallet.name);
-      setIsLoading(true);
-      setError(null);
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      if (wallet.id === 'walletconnect') {
-        if (Platform.OS === 'ios' && Alert.prompt) {
-          Alert.prompt('WalletConnect', 'Enter WalletConnect URI', [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Connect',
-              onPress: async (uri) => {
-                if (uri) await loginWithWalletConnect(uri, onAuthSuccess);
-              },
-            },
-          ]);
-        } else {
-          Alert.alert('WalletConnect URI', 'URI entry only supported on iOS');
-        }
-      } else {
-        const walletInstance = createWallet(wallet.walletId as any);
-        await loginWithWallet(walletInstance, onAuthSuccess);
-      }
-    } catch (err: any) {
-      setError(err.message || `Failed to connect ${wallet.name}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSIWEAuthentication = () => {
-    console.log('🔐 User clicked SIWE authentication');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setShowSIWESelector(true);
-  };
 
   const handleEmailSubmit = async () => {
     if (!email) {
@@ -428,37 +263,13 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
         />
         
         <AppleButton
-          title="👛 Connect Wallet"
+          title="🔍 Continue with Google"
           variant="tertiary"
           size="medium"
           fullWidth
-          onPress={() => navigateToStep('wallet')}
+          onPress={() => handleSocialLogin(SOCIAL_PROVIDERS[1])}
           style={styles.secondaryOption}
         />
-        
-        <AppleButton
-          title="🌐 More Social Options"
-          variant="tertiary"
-          size="medium"
-          fullWidth
-          onPress={() => navigateToStep('social')}
-          style={styles.secondaryOption}
-        />
-
-        {/* Dev Mode */}
-        {testWallet.isDevelopment && (
-          <View style={styles.devSection}>
-            <Text style={styles.devLabel}>— DEVELOPMENT —</Text>
-            <AppleButton
-              title="🔐 Sign in with SIWE"
-              variant="secondary"
-              size="small"
-              fullWidth
-              onPress={handleSIWEAuthentication}
-              style={styles.devButton}
-            />
-          </View>
-        )}
       </View>
     </View>
   );
@@ -539,61 +350,6 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
     </View>
   );
 
-  const renderSocial = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Social Sign In</Text>
-        <Text style={styles.subtitle}>
-          Choose your preferred social account
-        </Text>
-      </View>
-
-      <View style={styles.optionsContainer}>
-        {SOCIAL_PROVIDERS.map((provider) => (
-          <AppleButton
-            key={provider.id}
-            title={provider.name}
-            variant={provider.primary ? 'primary' : 'secondary'}
-            size="large"
-            fullWidth
-            icon={provider.icon}
-            loading={isLoading && selectedPath === provider.id}
-            onPress={() => handleSocialLogin(provider)}
-            style={styles.socialButton}
-          />
-        ))}
-      </View>
-    </View>
-  );
-
-  const renderWallet = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Connect Wallet</Text>
-        <Text style={styles.subtitle}>
-          Choose how you'd like to connect
-        </Text>
-      </View>
-
-      <View style={styles.optionsContainer}>
-        {WALLET_OPTIONS.map((wallet) => (
-          <TouchableOpacity
-            key={wallet.id}
-            style={styles.walletOption}
-            onPress={() => handleWalletConnect(wallet)}
-            disabled={isLoading}
-          >
-            <Text style={styles.walletIcon}>{wallet.icon}</Text>
-            <View style={styles.walletInfo}>
-              <Text style={styles.walletName}>{wallet.name}</Text>
-              <Text style={styles.walletDescription}>{wallet.description}</Text>
-            </View>
-            <Text style={styles.walletArrow}>›</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -603,10 +359,6 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
         return renderEmail();
       case 'verification':
         return renderVerification();
-      case 'social':
-        return renderSocial();
-      case 'wallet':
-        return renderWallet();
       default:
         return renderChoice();
     }
@@ -662,16 +414,7 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
         </View>
 
         {/* Floating Test Wallet - positioned for auth screen */}
-        <FloatingTestWallet 
-          position="auth-screen"
-        />
-
-        {/* SIWE Wallet Selector Modal */}
-        <SIWEWalletSelector
-          visible={showSIWESelector}
-          onClose={() => setShowSIWESelector(false)}
-          onSuccess={onAuthSuccess}
-        />
+        {/* Removed dev wallet features */}
       </SafeAreaView>
     </Animated.View>
   );
@@ -768,53 +511,8 @@ const styles = StyleSheet.create({
   socialButton: {
     marginBottom: Apple.Spacing.small,
   },
-  walletOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Apple.Spacing.large,
-    backgroundColor: Apple.Colors.secondarySystemBackground,
-    borderRadius: Apple.Radius.medium,
-    marginBottom: Apple.Spacing.small,
-  },
-  walletIcon: {
-    fontSize: 24,
-    marginRight: Apple.Spacing.medium,
-  },
-  walletInfo: {
-    flex: 1,
-  },
-  walletName: {
-    fontSize: Apple.Typography.body.fontSize,
-    fontWeight: '600',
-    color: Apple.Colors.label,
-    marginBottom: Apple.Spacing.micro,
-  },
-  walletDescription: {
-    fontSize: Apple.Typography.callout.fontSize,
-    color: Apple.Colors.secondaryLabel,
-  },
-  walletArrow: {
-    fontSize: 20,
-    color: Apple.Colors.systemGray,
-    fontWeight: '300',
-  },
   resendButton: {
     marginTop: Apple.Spacing.medium,
-  },
-  devSection: {
-    marginTop: Apple.Spacing.xlarge,
-    alignItems: 'center',
-    width: '100%',
-  },
-  devLabel: {
-    fontSize: Apple.Typography.caption1.fontSize,
-    color: Apple.Colors.systemOrange,
-    fontWeight: '600',
-    marginBottom: Apple.Spacing.medium,
-    letterSpacing: 1,
-  },
-  devButton: {
-    opacity: 0.8,
   },
   footer: {
     paddingHorizontal: Apple.Spacing.xlarge,

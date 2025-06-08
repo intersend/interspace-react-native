@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppleOnboarding from './onboarding/AppleOnboarding';
-import AppleAuthScreen from './auth/AppleAuthScreen';
+import AppleNativeAuthScreen from './auth/AppleNativeAuthScreen';
 import { useAuth } from '../hooks/useAuth';
 
 interface AppleAppFlowProps {
@@ -149,7 +149,7 @@ export default function AppleAppFlow({ children }: AppleAppFlowProps) {
     
     case 'authentication':
       return (
-        <AppleAuthScreen 
+        <AppleNativeAuthScreen
           initialPath={authPath}
           onAuthSuccess={handleAuthSuccess}
         />
@@ -167,7 +167,7 @@ export default function AppleAppFlow({ children }: AppleAppFlowProps) {
         console.warn('⚠️ Debug - isAuthenticated:', isAuthenticated, 'user:', !!user, 'userDetails:', user);
         setAppState('authentication');
         return (
-          <AppleAuthScreen 
+          <AppleNativeAuthScreen
             initialPath="choice"  // Always show choice after logout
             onAuthSuccess={handleAuthSuccess}
           />
