@@ -1,22 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useConnect, useActiveWallet, useDisconnect, useActiveAccount } from 'thirdweb/react';
-import { inAppWallet, createWallet } from 'thirdweb/wallets';
-import { preAuthenticate, hasStoredPasskey } from 'thirdweb/wallets/in-app';
-import { createAuth } from 'thirdweb/auth';
-import { privateKeyToAccount } from 'thirdweb/wallets';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { client, DEFAULT_CHAIN } from '../../constants/silencelabs';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Keychain from 'react-native-keychain';
+import * as Passkey from 'react-native-passkey';
 import { apiService } from '../services/api';
 import { User, WalletConnectConfig, UseAuthReturn } from '../types';
 
-// Create Thirdweb Auth instance for SIWE
-const thirdwebAuth = createAuth({
-  domain: 'localhost',
-  client,
-});
-
-// Single storage key for entire authentication session
 const AUTH_SESSION_KEY = 'interspace_session';
 
 interface AuthSession {
@@ -30,9 +20,7 @@ interface AuthSession {
 
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated';
 
-interface AuthContextValue extends UseAuthReturn {
-  // Additional context-specific methods if needed
-}
+interface AuthContextValue extends UseAuthReturn {}
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -45,96 +33,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Thirdweb hooks
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const activeWallet = useActiveWallet();
-  const activeAccount = useActiveAccount();
-
-  // Derived states
   const isAuthenticated = authState === 'authenticated';
   const isLoading = authState === 'loading';
 
-  // Set up auth expiration handler
   useEffect(() => {
-    // Register the auth expiration handler with API service
-    apiService.setAuthExpiredHandler(() => {
-      console.log('🔐 Auth expired, triggering logout...');
-      logout();
-    });
+    apiService.setAuthExpiredHandler(() => logout());
   }, []);
 
-  // Initialize authentication on app start
   useEffect(() => {
     initializeAuth();
   }, []);
 
-  // Monitor wallet disconnection for non-guest users
-  useEffect(() => {
-    if (authState === 'authenticated' && user && !user.isGuest && !activeWallet) {
-      console.log('🔌 External wallet disconnected, logging out non-guest user');
-      logout();
-    }
-  }, [activeWallet, authState, user]);
-
   const initializeAuth = async () => {
     try {
-      console.log('🚀 Initializing authentication...');
       setAuthState('loading');
-      setError(null);
-
-      // Try to load session from storage
       const sessionData = await AsyncStorage.getItem(AUTH_SESSION_KEY);
       if (!sessionData) {
-        console.log('📭 No stored session found');
         setAuthState('unauthenticated');
         return;
       }
-
       const session: AuthSession = JSON.parse(sessionData);
-      console.log('💾 Found stored session for user:', session.user.id);
-
-      // Check if session is expired
       if (Date.now() > session.expiresAt) {
-        console.log('⏰ Session expired, clearing storage');
         await clearAllAuthData();
         setAuthState('unauthenticated');
         return;
       }
-
-      // Validate session with backend
-      console.log('🔍 Validating session with backend...');
-      const isValid = await validateSession(session);
-      
-      if (!isValid) {
-        console.log('❌ Session validation failed, clearing storage');
+      const valid = await validateSession(session);
+      if (!valid) {
         await clearAllAuthData();
         setAuthState('unauthenticated');
         return;
       }
-
-      // Session is valid, restore user state
-      console.log('✅ Session validated, restoring user state');
       setUser(session.user);
       setAuthState('authenticated');
-      
-      // Reconnect to active profile's wallet
-      try {
-        console.log('🔄 Reconnecting to active profile wallet...');
-        const profiles = await apiService.getProfiles();
-        const activeProfile = profiles.find(p => p.isActive);
-        
-        if (activeProfile) {
-          await connectToProfileWallet(activeProfile.id);
-          console.log('✅ Reconnected to active profile wallet');
-        }
-      } catch (walletError) {
-        console.warn('⚠️ Failed to reconnect to profile wallet:', walletError);
-        // Continue - user is authenticated even if wallet reconnection fails
-      }
-
-    } catch (error) {
-      console.error('❌ Auth initialization failed:', error);
+    } catch {
       await clearAllAuthData();
       setAuthState('unauthenticated');
     }
@@ -142,126 +74,83 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const validateSession = async (session: AuthSession): Promise<boolean> => {
     try {
-      // Set tokens for API service
-      await AsyncStorage.setItem('interspace_access_token', session.accessToken);
-      await AsyncStorage.setItem('interspace_refresh_token', session.refreshToken);
-
-      // Try to refresh token or fetch user data
+      await Keychain.setGenericPassword('token', session.accessToken, { service: 'interspace_access_token' });
+      await Keychain.setGenericPassword('refresh', session.refreshToken, { service: 'interspace_refresh_token' });
       const refreshed = await apiService.refreshToken();
-      if (refreshed) {
-        console.log('✅ Token refreshed successfully');
-        return true;
-      }
-
-      // If refresh failed, try to get profiles (validates token)
-      const profiles = await apiService.getProfiles();
-      console.log('✅ Session validated with profiles check');
+      if (refreshed) return true;
+      await apiService.getProfiles();
       return true;
-
-    } catch (error) {
-      console.log('❌ Session validation failed:', error);
+    } catch {
       return false;
     }
   };
 
   const login = async (config: WalletConnectConfig, onSuccess?: () => void): Promise<void> => {
     try {
-      console.log('🔐 Starting login with strategy:', config.strategy);
       setAuthState('loading');
       setError(null);
-
-      // CRITICAL: Clear any existing Thirdweb data to prevent cross-user contamination
-      console.log('🧹 Clearing existing wallet data before new authentication...');
-      try {
-        const allKeys = await AsyncStorage.getAllKeys();
-        const walletKeys = allKeys.filter(key => 
-          key.includes('thirdweb') || 
-          key.includes('tw-') || 
-          key.includes('in-app-wallet') ||
-          key.includes('guest') ||
-          key.includes('embedded-wallet')
-        );
-        
-        if (walletKeys.length > 0) {
-          console.log(`🧹 Clearing ${walletKeys.length} wallet-related keys before auth`);
-          await AsyncStorage.multiRemove(walletKeys);
-        }
-      } catch (error) {
-        console.warn('⚠️ Failed to clear wallet data before auth:', error);
+      let providerToken = '';
+      if (config.strategy === 'google') {
+        const result = await Google.logInAsync({
+          clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '',
+          scopes: ['profile', 'email'],
+        });
+        if (result.type !== 'success') throw new Error('Google login cancelled');
+        providerToken = result.idToken || '';
+      } else if (config.strategy === 'apple') {
+        const res = await AppleAuthentication.signInAsync({
+          requestedScopes: [AppleAuthentication.AppleAuthenticationScope.EMAIL],
+        });
+        providerToken = res.identityToken || '';
+      } else if (config.strategy === 'passkey') {
+        const cred = await Passkey.create({ challenge: 'authenticate', user: { id: 'user', name: 'interspace' } });
+        const signRes = await Passkey.sign({ credentialId: cred.id, challenge: 'authenticate' });
+        providerToken = signRes.signature;
+      } else if (config.strategy === 'email') {
+        if (!config.verificationCode) throw new Error('Verification code required');
+        providerToken = config.verificationCode;
       }
 
-      // Step 1: Connect wallet via Thirdweb
-      const { wallet, authToken, walletAddress } = await connectWallet(config);
-      console.log('✅ Wallet connected:', walletAddress);
-
-      // Step 2: Authenticate with backend (device info handled internally)
-      console.log('🌐 Authenticating with backend...');
       const authResponse = await apiService.authenticate({
-        authToken,
+        authToken: providerToken,
         authStrategy: config.strategy,
-        walletAddress,
         email: config.email,
-        verificationCode: config.verificationCode,
-        socialProvider: config.socialProvider,
-        socialProfile: config.socialProfile,
       });
 
-      console.log('✅ Backend authentication successful');
-
-      // Step 4: Create user object
       const userData: User = {
         id: extractUserIdFromToken(authResponse.accessToken),
-        walletAddress,
-        isGuest: config.strategy === 'guest' || !!config.testWallet,
-        authStrategies: [config.strategy],
         email: config.email,
-        profilesCount: 0, // Will be updated after profile setup
-        linkedAccountsCount: 0, // Will be updated after profile setup
-        activeDevicesCount: 1, // Current device
-        socialAccounts: [], // Will be populated if needed
+        walletAddress: undefined,
+        isGuest: false,
+        authStrategies: [config.strategy],
+        profilesCount: 0,
+        linkedAccountsCount: 0,
+        activeDevicesCount: 1,
+        socialAccounts: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      // Step 5: Store session data
       const session: AuthSession = {
         user: userData,
         accessToken: authResponse.accessToken,
         refreshToken: authResponse.refreshToken,
-        expiresAt: Date.now() + (authResponse.expiresIn * 1000),
+        expiresAt: Date.now() + authResponse.expiresIn * 1000,
         deviceId: 'mobile_device',
         createdAt: new Date().toISOString(),
       };
 
       await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-      await AsyncStorage.setItem('interspace_access_token', authResponse.accessToken);
-      await AsyncStorage.setItem('interspace_refresh_token', authResponse.refreshToken);
+      await Keychain.setGenericPassword('token', authResponse.accessToken, { service: 'interspace_access_token' });
+      await Keychain.setGenericPassword('refresh', authResponse.refreshToken, { service: 'interspace_refresh_token' });
+      apiService.setAccessToken(authResponse.accessToken);
 
-      console.log('💾 Session stored successfully');
-
-      // Step 6: Handle SmartProfile creation and linking (pass wallet for social logins)
-      await handleSmartProfileSetup(config, walletAddress, wallet);
-
-      // No need for auto-linking - social wallet IS the profile wallet now
-
-      // Step 7: Set authenticated state with immediate propagation
       setUser(userData);
       setAuthState('authenticated');
-      
-      // Force immediate state propagation
-      console.log('🎉 Login completed successfully');
-      console.log('🔄 Final auth state - isAuthenticated should now be true');
-      console.log('👤 User set:', !!userData);
-      console.log('📊 Auth state set to: authenticated');
-
-      // ONLY call success callback after complete successful authentication
-      console.log('🚀 Calling success callback to force UI update');
       onSuccess?.();
-
-    } catch (error: any) {
-      console.error('❌ Login failed:', error);
-      await handleAuthError(error);
-      throw error;
+    } catch (err: any) {
+      await handleAuthError(err);
+      throw err;
     }
   };
 
@@ -916,117 +805,32 @@ Issued At: ${payload.issued_at}`;
 
   const logout = async (onComplete?: () => void): Promise<void> => {
     try {
-      console.log('🚪 Starting logout...');
-
-      // Disconnect wallet
-      if (activeWallet) {
-        disconnect(activeWallet);
-      }
-
-      // Call backend logout
-      try {
-        await apiService.logout();
-      } catch (error) {
-        console.warn('⚠️ Backend logout failed, continuing with local cleanup');
-      }
-
-      // Clear all auth data
-      await clearAllAuthData();
-
-      // Reset state with forced propagation
-      setUser(null);
-      setError(null);
-      setAuthState('unauthenticated');
-
-      console.log('✅ Logout completed');
-      console.log('🔄 Auth state reset to unauthenticated');
-      console.log('👤 User cleared');
-
-      // Call completion callback
-      onComplete?.();
-    } catch (error) {
-      console.error('❌ Logout failed:', error);
-      // Force cleanup even if something fails
-      await clearAllAuthData();
-      setUser(null);
-      setError(null);
-      setAuthState('unauthenticated');
-      onComplete?.();
-    }
+      await apiService.logout();
+    } catch {}
+    await clearAllAuthData();
+    setUser(null);
+    setAuthState('unauthenticated');
+    onComplete?.();
   };
 
   const clearAllAuthData = async () => {
-    console.log('🧹 Clearing all authentication data...');
-    
-    // Remove all auth-related storage
-    const keysToRemove = [
-      AUTH_SESSION_KEY,
-      'interspace_access_token',
-      'interspace_refresh_token',
-      'interspace_user_data',
-      'interspace_active_profile',
-      'interspace_auth_state',
-      'interspace_profiles_cache',
-      'interspace_linked_accounts_cache',
-    ];
-
-    // Also clear ALL Thirdweb wallet data to prevent cross-user contamination
-    try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      const thirdwebKeys = allKeys.filter(key => 
-        key.includes('thirdweb') || 
-        key.includes('tw-') || 
-        key.includes('in-app-wallet') ||
-        key.includes('guest') ||
-        key.includes('embedded-wallet') ||
-        key.includes('profile_wallet_')
-      );
-      
-      if (thirdwebKeys.length > 0) {
-        console.log(`🧹 Clearing ${thirdwebKeys.length} Thirdweb-related keys`);
-        await AsyncStorage.multiRemove(thirdwebKeys);
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to clear Thirdweb data:', error);
-    }
-
-    await AsyncStorage.multiRemove(keysToRemove);
-    console.log('✅ All auth data cleared');
+    await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+    await Keychain.resetGenericPassword({ service: 'interspace_access_token' });
+    await Keychain.resetGenericPassword({ service: 'interspace_refresh_token' });
   };
 
   const handleAuthError = async (error: any) => {
-    console.error('🚨 Authentication error, clearing all data:', error);
-    
-    // Disconnect wallet
-    if (activeWallet) {
-      disconnect(activeWallet);
-    }
-
-    // Clear all data
     await clearAllAuthData();
-
-    // Set error state
     setError(error.message || 'Authentication failed');
     setUser(null);
     setAuthState('unauthenticated');
   };
 
-  const sendVerificationCode = async (
-    strategy: 'email',
-    contact: string
-  ): Promise<void> => {
+  const sendVerificationCode = async (_: 'email', contact: string): Promise<void> => {
     try {
       setError(null);
-      
-      await preAuthenticate({
-        client,
-        strategy: 'email',
-        email: contact,
-      });
-      
-      console.log(`✅ Verification code sent to ${contact}`);
+      await apiService.sendVerificationCode(contact);
     } catch (error: any) {
-      console.error('❌ Failed to send verification code:', error);
       setError(error.message || 'Failed to send verification code');
       throw error;
     }
@@ -1038,20 +842,18 @@ Issued At: ${payload.issued_at}`;
       if (!refreshed) {
         await logout();
       }
-    } catch (error) {
-      console.error('❌ Auth refresh failed:', error);
+    } catch {
       await logout();
     }
   };
 
   const extractUserIdFromToken = (token: string): string => {
     try {
-      // Simple JWT decode (just for user ID, not for security)
       const payload = token.split('.')[1];
       const decoded = JSON.parse(atob(payload));
       return decoded.userId || token;
     } catch {
-      return token; // Fallback to token itself
+      return token;
     }
   };
 
@@ -1068,11 +870,7 @@ Issued At: ${payload.issued_at}`;
     sendVerificationCode,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): UseAuthReturn {
