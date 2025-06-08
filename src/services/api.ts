@@ -148,27 +148,14 @@ class ApiService {
   async authenticate(authData: {
     authToken: string;
     authStrategy: string;
+    deviceId: string;
+    deviceName: string;
+    deviceType: 'ios' | 'android' | 'web';
     walletAddress?: string;
-    email?: string;
-    phoneNumber?: string;
-    verificationCode?: string;
-    socialProvider?: string;
-    socialProfile?: {
-      id: string;
-      email?: string;
-      name?: string;
-      picture?: string;
-      [key: string]: any;
-    };
   }): Promise<AuthResponse> {
-    const deviceInfo = await this.getDeviceInfo();
-    
     const response = await this.request<AuthResponse>('/auth/authenticate', {
       method: 'POST',
-      body: JSON.stringify({
-        ...authData,
-        ...deviceInfo,
-      }),
+      body: JSON.stringify(authData),
     });
 
     if (response.success && response.data.accessToken) {
@@ -188,8 +175,16 @@ class ApiService {
     });
   }
 
+  async sendEmailCode(email: string): Promise<void> {
+    await this.request('/auth/send-email-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async refreshToken(): Promise<boolean> {
     try {
+      await this.loadStoredToken();
       const creds = await Keychain.getGenericPassword({
         service: 'interspace_refresh_token',
       });
@@ -233,6 +228,7 @@ class ApiService {
 
   async logout(): Promise<void> {
     try {
+      await this.loadStoredToken();
       const creds = await Keychain.getGenericPassword({
         service: 'interspace_refresh_token',
       });
@@ -250,6 +246,12 @@ class ApiService {
       await Keychain.resetGenericPassword({ service: 'interspace_refresh_token' });
       await AsyncStorage.removeItem('interspace_user_data');
     }
+  }
+
+  async getAuthMe(): Promise<User> {
+    await this.loadStoredToken();
+    const response = await this.requestWithRefresh<User>('/auth/me');
+    return response.data;
   }
 
   // SmartProfiles

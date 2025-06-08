@@ -4,6 +4,8 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Keychain from 'react-native-keychain';
 import * as Passkey from 'react-native-passkey';
+import * as Application from 'expo-application';
+import { Platform } from 'react-native';
 import { apiService } from '../services/api';
 import { User, WalletConnectConfig, UseAuthReturn } from '../types';
 
@@ -111,10 +113,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         providerToken = config.verificationCode;
       }
 
+      const deviceId =
+        Platform.OS === 'android'
+          ? (await Application.getAndroidId()) || 'unknown-android'
+          : (await Application.getIosIdForVendorAsync()) || 'unknown-ios';
+
       const authResponse = await apiService.authenticate({
         authToken: providerToken,
         authStrategy: config.strategy,
-        email: config.email,
+        deviceId,
+        deviceName: `${Platform.OS} Device`,
+        deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
+        walletAddress: config.wallet?.getAddress?.() ?? undefined,
       });
 
       const userData: User = {
@@ -136,7 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         accessToken: authResponse.accessToken,
         refreshToken: authResponse.refreshToken,
         expiresAt: Date.now() + authResponse.expiresIn * 1000,
-        deviceId: 'mobile_device',
+        deviceId,
         createdAt: new Date().toISOString(),
       };
 
