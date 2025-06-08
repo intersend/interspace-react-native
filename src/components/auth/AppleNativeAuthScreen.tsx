@@ -18,7 +18,7 @@ import { useTestWallet } from '../../hooks/useTestWallet';
 import { WalletConnectConfig } from '../../types';
 import * as Haptics from 'expo-haptics';
 import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
-import { client } from '../../../constants/thirdweb';
+import { client } from '../../../constants/silencelabs';
 import AppleWalletSelector from './AppleWalletSelector';
 import AppleContactAuthModal from './AppleContactAuthModal';
 import AppleBottomTray from '../ui/AppleBottomTray';

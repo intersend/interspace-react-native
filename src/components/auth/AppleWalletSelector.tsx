@@ -24,7 +24,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { WalletConnectConfig } from '../../types';
 import * as Haptics from 'expo-haptics';
 import { createWallet } from 'thirdweb/wallets';
-import { DEFAULT_TESTNET_CHAIN } from '../../../constants/thirdweb';
+import { DEFAULT_TESTNET_CHAIN } from '../../../constants/silencelabs';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

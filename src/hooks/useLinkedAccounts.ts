@@ -115,7 +115,7 @@ export function useLinkedAccounts(profileId?: string): UseLinkedAccountsReturn {
           
           // Import Thirdweb utilities
           const { getProfiles } = await import('thirdweb/wallets/in-app');
-          const { client } = await import('../../constants/thirdweb');
+          const { client } = await import('../../constants/silencelabs');
           const { useUnlinkProfile } = await import('thirdweb/react');
           
           // Get all linked profiles from Thirdweb

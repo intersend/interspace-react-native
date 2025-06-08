@@ -12,7 +12,7 @@ import { createWallet } from 'thirdweb/wallets';
 import { useWalletInfo, useWalletImage } from 'thirdweb/react';
 import { Colors, SpaceTokens } from '../../../constants/Colors';
 import { WalletConnectConfig } from '../../types';
-import { DEFAULT_TESTNET_CHAIN } from '../../../constants/thirdweb';
+import { DEFAULT_TESTNET_CHAIN } from '../../../constants/silencelabs';
 
 interface ExternalWalletAuthProps {
   onLogin: (config: WalletConnectConfig) => Promise<void>;
