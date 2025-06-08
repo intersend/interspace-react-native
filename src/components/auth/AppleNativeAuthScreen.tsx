@@ -14,12 +14,10 @@ import {
 } from 'react-native';
 import { Apple } from '../../../constants/AppleDesign';
 import { useAuth } from '../../hooks/useAuth';
-import { useTestWallet } from '../../hooks/useTestWallet';
 import { WalletConnectConfig } from '../../types';
 import * as Haptics from 'expo-haptics';
 import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
 import { client } from '../../../constants/silencelabs';
-import AppleWalletSelector from './AppleWalletSelector';
 import AppleContactAuthModal from './AppleContactAuthModal';
 import AppleBottomTray from '../ui/AppleBottomTray';
 
@@ -31,7 +29,6 @@ interface AppleNativeAuthScreenProps {
 
 export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuthScreenProps) {
   const [hasPasskey, setHasPasskey] = useState(false);
-  const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +39,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   const buttonOpacityAnim = useRef(new Animated.Value(0)).current;
   
   const { login } = useAuth();
-  const testWallet = useTestWallet();
 
   useEffect(() => {
     // Check for stored passkey
@@ -120,11 +116,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     }
   };
 
-  const handleConnectWallet = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowWalletSelector(true);
-  };
-
   const handleMoreOptions = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowMoreOptions(true);
@@ -159,18 +150,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
           { opacity: buttonOpacityAnim }
         ]}
       >
-        {/* Connect Wallet - Primary Option */}
-        <AppleAuthButton
-          onPress={handleConnectWallet}
-          variant="apple"
-          loading={isLoading}
-        >
-          <View style={styles.buttonContent}>
-            <Text style={styles.walletIcon}>👛</Text>
-            <Text style={styles.appleButtonText}>Connect Wallet</Text>
-          </View>
-        </AppleAuthButton>
-
         {/* Continue with Passkey */}
         {hasPasskey && (
           <AppleAuthButton
@@ -248,31 +227,12 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
             {/* Social Options */}
             <View style={styles.optionGroup}>
               <Text style={styles.optionGroupTitle}>Social</Text>
-
-              {[
-                { icon: '🔍', title: 'Continue with Google', provider: 'google' },
-                { icon: '📘', title: 'Continue with Facebook', provider: 'facebook' },
-                { icon: '𝕏', title: 'Continue with X', provider: 'x' },
-                { icon: '✈️', title: 'Continue with Telegram', provider: 'telegram' },
-                { icon: '📺', title: 'Continue with Twitch', provider: 'twitch' },
-                { icon: '🎮', title: 'Continue with Discord', provider: 'discord' },
-                { icon: '📡', title: 'Continue with Farcaster', provider: 'farcaster' },
-                { icon: '🐱', title: 'Continue with GitHub', provider: 'github' },
-                { icon: '💚', title: 'Continue with Line', provider: 'line' },
-                { icon: '💙', title: 'Continue with Coinbase', provider: 'coinbase' },
-                { icon: '🎮', title: 'Continue with Steam', provider: 'steam' },
-                { icon: '🔑', title: 'Continue with Backend', provider: 'backend' },
-              ].map((opt) => (
-                <OptionButton
-                  key={opt.provider}
-                  icon={opt.icon}
-                  title={opt.title}
-                  onPress={() => handleSocialAuth(opt.provider)}
-                />
-              ))}
+              <OptionButton
+                icon="🔍"
+                title="Continue with Google"
+                  onPress={() => handleSocialAuth("google")}
+              />
             </View>
-
-            {/* Other Options */}
             <View style={styles.optionGroup}>
               <Text style={styles.optionGroupTitle}>Other</Text>
               
@@ -298,20 +258,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
               )}
             </View>
 
-            {/* Development Options */}
-            {testWallet.isDevelopment && (
-              <View style={styles.optionGroup}>
-                <Text style={[styles.optionGroupTitle, { color: Apple.Colors.systemOrange }]}>
-                  Development
-                </Text>
-                
-                <OptionButton
-                  icon="🧪"
-                  title="Test Wallet"
-                  onPress={() => handleTestWallet()}
-                />
-              </View>
-            )}
           </ScrollView>
       </AppleBottomTray>
   );
@@ -355,10 +301,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     }
   };
 
-  const handleTestWallet = async () => {
-    setShowMoreOptions(false);
-    // Implementation for test wallet
-  };
 
   return (
     <>
@@ -371,13 +313,6 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
           {renderMainScreen()}
         </ScrollView>
       </SafeAreaView>
-
-      {/* Wallet Selector Modal */}
-      <AppleWalletSelector
-        visible={showWalletSelector}
-        onClose={() => setShowWalletSelector(false)}
-        onSuccess={onAuthSuccess}
-      />
 
       {/* Email Authentication Modal */}
       <AppleContactAuthModal
@@ -519,11 +454,6 @@ const styles = StyleSheet.create({
     height: 16,
     marginRight: Apple.Spacing.small,
     tintColor: Apple.Colors.systemBackground,
-  },
-  walletIcon: {
-    fontSize: 16,
-    marginRight: Apple.Spacing.small,
-    color: Apple.Colors.systemBackground,
   },
   passkeyIcon: {
     fontSize: 16,
