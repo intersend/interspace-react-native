@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { Apple } from '../../../constants/AppleDesign';
 import AppleButton from '../ui/AppleButton';
@@ -155,10 +156,17 @@ const WALLET_OPTIONS: WalletOption[] = [
     walletId: 'com.coinbase.wallet',
   },
   {
+    id: 'rainbow',
+    name: 'Rainbow',
+    icon: '🌈',
+    description: 'Connect using Rainbow',
+    walletId: 'me.rainbow',
+  },
+  {
     id: 'walletconnect',
-    name: 'WalletConnect',
+    name: 'WalletConnect (Enter URI)',
     icon: '🔗',
-    description: 'Scan QR code with any wallet',
+    description: 'Use manual WalletConnect URI',
     walletId: 'walletConnect',
   },
 ];
@@ -180,7 +188,13 @@ export default function AppleAuthScreen({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-  const { login, isLoading: authLoading, sendVerificationCode } = useAuth();
+  const {
+    login,
+    loginWithWallet,
+    loginWithWalletConnect,
+    isLoading: authLoading,
+    sendVerificationCode,
+  } = useAuth();
   const testWallet = useTestWallet();
 
   useEffect(() => {
@@ -294,17 +308,29 @@ export default function AppleAuthScreen({
     try {
       setIsLoading(true);
       setError(null);
-      
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      const walletInstance = createWallet(wallet.walletId as any);
-      
-      const config: WalletConnectConfig = {
-        strategy: 'wallet',
-        wallet: walletInstance,
-      };
-      
-      await login(config, onAuthSuccess);
+      if (wallet.id === 'walletconnect') {
+        if (Platform.OS === 'ios' && Alert.prompt) {
+          Alert.prompt('WalletConnect', 'Enter WalletConnect URI', [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Connect',
+              onPress: async (uri) => {
+                if (uri) await loginWithWalletConnect(uri, onAuthSuccess);
+              },
+            },
+          ]);
+        } else {
+          Alert.alert('WalletConnect URI', 'URI entry only supported on iOS');
+        }
+      } else {
+        const walletInstance = createWallet(wallet.walletId as any);
+        await loginWithWallet(walletInstance, onAuthSuccess);
+      }
     } catch (err: any) {
       setError(err.message || `Failed to connect ${wallet.name}`);
     } finally {
