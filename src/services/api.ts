@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Keychain from 'react-native-keychain';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 import { 
@@ -35,16 +36,12 @@ class ApiService {
   // Token Management
   private async loadStoredToken() {
     try {
-      // Ensure AsyncStorage is available (React Native environment)
-      if (typeof AsyncStorage !== 'undefined') {
-        this.accessToken = await AsyncStorage.getItem('interspace_access_token');
-      } else {
-        console.warn('AsyncStorage not available, skipping token load');
-        this.accessToken = null;
-      }
+      const creds = await Keychain.getGenericPassword({
+        service: 'interspace_access_token',
+      });
+      this.accessToken = creds ? creds.password : null;
     } catch (error) {
       console.error('Failed to load stored token:', error);
-      // Ensure token is null on error
       this.accessToken = null;
     }
   }
@@ -52,9 +49,11 @@ class ApiService {
   public setAccessToken(token: string | null) {
     this.accessToken = token;
     if (token) {
-      AsyncStorage.setItem('interspace_access_token', token);
+      Keychain.setGenericPassword('token', token, {
+        service: 'interspace_access_token',
+      });
     } else {
-      AsyncStorage.removeItem('interspace_access_token');
+      Keychain.resetGenericPassword({ service: 'interspace_access_token' });
     }
   }
 
@@ -149,7 +148,7 @@ class ApiService {
   async authenticate(authData: {
     authToken: string;
     authStrategy: string;
-    walletAddress: string;
+    walletAddress?: string;
     email?: string;
     phoneNumber?: string;
     verificationCode?: string;
@@ -174,15 +173,27 @@ class ApiService {
 
     if (response.success && response.data.accessToken) {
       this.setAccessToken(response.data.accessToken);
-      await AsyncStorage.setItem('interspace_refresh_token', response.data.refreshToken);
+      await Keychain.setGenericPassword('refresh', response.data.refreshToken, {
+        service: 'interspace_refresh_token',
+      });
     }
 
     return response.data;
   }
 
+  async sendVerificationCode(email: string): Promise<void> {
+    await this.request('/auth/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async refreshToken(): Promise<boolean> {
     try {
-      const refreshToken = await AsyncStorage.getItem('interspace_refresh_token');
+      const creds = await Keychain.getGenericPassword({
+        service: 'interspace_refresh_token',
+      });
+      const refreshToken = creds ? creds.password : null;
       if (!refreshToken) return false;
 
       const response = await this.request<AuthResponse>('/auth/refresh', {
@@ -192,7 +203,9 @@ class ApiService {
 
       if (response.success && response.data.accessToken) {
         this.setAccessToken(response.data.accessToken);
-        await AsyncStorage.setItem('interspace_refresh_token', response.data.refreshToken);
+        await Keychain.setGenericPassword('refresh', response.data.refreshToken, {
+          service: 'interspace_refresh_token',
+        });
         return true;
       }
     } catch (error: any) {
@@ -204,7 +217,7 @@ class ApiService {
         
         // Clear all tokens
         this.setAccessToken(null);
-        await AsyncStorage.removeItem('interspace_refresh_token');
+        await Keychain.resetGenericPassword({ service: 'interspace_refresh_token' });
         await AsyncStorage.removeItem('interspace_user_data');
         
         // Notify auth context about expiration
@@ -220,7 +233,10 @@ class ApiService {
 
   async logout(): Promise<void> {
     try {
-      const refreshToken = await AsyncStorage.getItem('interspace_refresh_token');
+      const creds = await Keychain.getGenericPassword({
+        service: 'interspace_refresh_token',
+      });
+      const refreshToken = creds ? creds.password : null;
       if (refreshToken) {
         await this.request('/auth/logout', {
           method: 'POST',
@@ -231,7 +247,7 @@ class ApiService {
       console.error('Logout request failed:', error);
     } finally {
       this.setAccessToken(null);
-      await AsyncStorage.removeItem('interspace_refresh_token');
+      await Keychain.resetGenericPassword({ service: 'interspace_refresh_token' });
       await AsyncStorage.removeItem('interspace_user_data');
     }
   }
