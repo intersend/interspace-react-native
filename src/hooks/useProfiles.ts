@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { SmartProfile, UseProfilesReturn } from '../types';
-import { useProfileWallet } from '../contexts/ProfileWalletContext';
+import { useSessionWallet } from '../contexts/SessionWalletContext';
 
 export function useProfiles(): UseProfilesReturn {
   const [profiles, setProfiles] = useState<SmartProfile[]>([]);
@@ -9,7 +9,7 @@ export function useProfiles(): UseProfilesReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { createProfileWallet, switchProfileWallet } = useProfileWallet();
+  const { generateKey, refreshKey } = useSessionWallet();
 
   // Fetch profiles from backend
   const fetchProfiles = useCallback(async () => {
@@ -118,13 +118,13 @@ export function useProfiles(): UseProfilesReturn {
       const newProfile = await apiService.createProfile(name);
       console.log('✅ Backend profile created:', newProfile.id);
       
-      // Step 3: Create a guest wallet for this profile with unique storage
+      // Step 3: Generate a session key for this profile
       try {
-        const walletAddress = await createProfileWallet(newProfile.id);
-        console.log('✅ Profile wallet created:', walletAddress);
+        await generateKey();
+        console.log('✅ Session wallet key generated');
       } catch (walletError: any) {
-        console.error('⚠️ Failed to create guest wallet for profile:', walletError);
-        // Continue without wallet - user can still link external wallets
+        console.error('⚠️ Failed to generate session key:', walletError);
+        // Continue without key - user can still link external wallets
       }
       
       // Step 4: Add to local state
@@ -137,7 +137,7 @@ export function useProfiles(): UseProfilesReturn {
       setError(err.message || 'Failed to create profile');
       throw err;
     }
-  }, [profiles, createProfileWallet]);
+  }, [profiles, generateKey]);
 
   // Update profile
   const updateProfile = useCallback(async (
@@ -211,13 +211,13 @@ export function useProfiles(): UseProfilesReturn {
         setActiveProfile({ ...newActiveProfile, isActive: true });
       }
       
-      // Switch to the profile's wallet
+      // Refresh session wallet key
       try {
-        await switchProfileWallet(id);
-        console.log('✅ Switched to profile wallet');
+        await refreshKey();
+        console.log('✅ Session wallet refreshed');
       } catch (walletError) {
-        console.error('⚠️ Failed to switch wallet context:', walletError);
-        // Continue - profile is switched in backend even if wallet switch fails
+        console.error('⚠️ Failed to refresh session wallet:', walletError);
+        // Continue - profile is switched in backend even if refresh fails
       }
       
       console.log('✅ Switched to profile:', newActiveProfile?.name);
@@ -226,7 +226,7 @@ export function useProfiles(): UseProfilesReturn {
       setError(err.message || 'Failed to switch profile');
       throw err;
     }
-  }, [profiles, switchProfileWallet]);
+  }, [profiles, refreshKey]);
 
   // Keep legacy activateProfile for backward compatibility
   const activateProfile = switchToProfile;

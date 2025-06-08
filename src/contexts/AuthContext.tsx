@@ -6,10 +6,9 @@ import { createAuth } from 'thirdweb/auth';
 import { privateKeyToAccount } from 'thirdweb/wallets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { client, DEFAULT_CHAIN } from '../../constants/thirdweb';
+import { client, DEFAULT_CHAIN } from '../../constants/silencelabs';
 import { apiService } from '../services/api';
 import { User, WalletConnectConfig, UseAuthReturn } from '../types';
-import { useProfileWallet } from './ProfileWalletContext';
 
 // Create Thirdweb Auth instance for SIWE
 const thirdwebAuth = createAuth({

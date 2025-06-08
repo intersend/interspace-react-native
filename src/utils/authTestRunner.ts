@@ -1,6 +1,6 @@
 import { generateTestWallet, createWalletFromPrivateKey, TestWallet, getWalletInfo } from './walletTestUtils';
 import { WalletConnectConfig } from '../types';
-import { DEFAULT_TESTNET_CHAIN } from '../../constants/thirdweb';
+import { DEFAULT_TESTNET_CHAIN } from '../../constants/silencelabs';
 
 export interface AuthTestResult {
   success: boolean;

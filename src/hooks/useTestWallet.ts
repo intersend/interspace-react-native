@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { privateKeyToAccount, createWallet } from 'thirdweb/wallets';
-import { client } from '../../constants/thirdweb';
+import { client } from '../../constants/silencelabs';
 import { TestWallet } from '../types';
 
 export interface TestTransaction {

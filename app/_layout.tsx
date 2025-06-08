@@ -7,17 +7,14 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { ThirdwebProvider } from "thirdweb/react";
-import { inAppWallet } from "thirdweb/wallets";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { StatusBar } from "react-native";
 import { Colors } from "../constants/Colors";
-import { client } from "../constants/thirdweb";
 import CleanAppFlow from "../src/components/CleanAppFlow";
 import { AuthProvider } from "../src/contexts/AuthContext";
-import { ProfileWalletProvider } from "../src/contexts/ProfileWalletContext";
+import { SessionWalletProvider } from "../src/contexts/SessionWalletContext";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -53,11 +50,10 @@ export default function RootLayout() {
 	};
 
 	return (
-		<GestureHandlerRootView style={{ flex: 1 }}>
-			<ThirdwebProvider>
-				<ProfileWalletProvider>
-					<AuthProvider>
-						<ThemeProvider value={InterspaceTheme}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                        <SessionWalletProvider>
+                                <AuthProvider>
+                                        <ThemeProvider value={InterspaceTheme}>
 							<StatusBar
 								backgroundColor={Colors.dark.background}
 								barStyle="light-content"
@@ -69,9 +65,8 @@ export default function RootLayout() {
 								</Stack>
 							</CleanAppFlow>
 						</ThemeProvider>
-					</AuthProvider>
-				</ProfileWalletProvider>
-			</ThirdwebProvider>
-		</GestureHandlerRootView>
+                                        </AuthProvider>
+                                </SessionWalletProvider>
+                </GestureHandlerRootView>
 	);
 }

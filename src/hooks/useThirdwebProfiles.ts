@@ -7,7 +7,7 @@ import {
 } from 'thirdweb/react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { preAuthenticate, hasStoredPasskey, getProfiles } from 'thirdweb/wallets/in-app';
-import { client, DEFAULT_CHAIN } from '../../constants/thirdweb';
+import { client, DEFAULT_CHAIN } from '../../constants/silencelabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
 

@@ -1,6 +1,6 @@
 import { privateKeyToAccount } from 'thirdweb/wallets';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
-import { client, DEFAULT_TESTNET_CHAIN } from '../../constants/thirdweb';
+import { client, DEFAULT_TESTNET_CHAIN } from '../../constants/silencelabs';
 
 /**
  * Generate a random private key for testing
