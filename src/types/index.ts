@@ -186,6 +186,7 @@ export interface WalletConnectConfig {
   wallet?: any;
   chain?: any;
   testWallet?: TestWallet;
+  walletConnectUri?: string;
   // Social authentication data
   socialProvider?: string;
   socialProfile?: {
@@ -254,6 +255,8 @@ export interface UseAuthReturn {
   isLoading: boolean;
   error: string | null;
   login: (config: WalletConnectConfig, onSuccess?: () => void) => Promise<void>;
+  loginWithWallet: (wallet: any, onSuccess?: () => void) => Promise<void>;
+  loginWithWalletConnect: (uri: string, onSuccess?: () => void) => Promise<void>;
   logout: (onComplete?: () => void) => Promise<void>;
   refreshAuth: () => Promise<void>;
   sendVerificationCode: (strategy: 'email', contact: string) => Promise<void>;

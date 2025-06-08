@@ -265,6 +265,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const loginWithWallet = async (wallet: any, onSuccess?: () => void) => {
+    const config: WalletConnectConfig = {
+      strategy: 'wallet',
+      wallet,
+    };
+    await login(config, onSuccess);
+  };
+
+  const loginWithWalletConnect = async (uri: string, onSuccess?: () => void) => {
+    const wallet = createWallet('walletConnect' as any, { uri });
+    const config: WalletConnectConfig = {
+      strategy: 'wallet',
+      wallet,
+      walletConnectUri: uri,
+    };
+    await login(config, onSuccess);
+  };
+
   const connectWallet = async (config: WalletConnectConfig) => {
     if (config.strategy === 'wallet' && config.testWallet) {
       // Test wallet authentication with SIWE
@@ -1043,6 +1061,8 @@ Issued At: ${payload.issued_at}`;
     isLoading,
     error,
     login,
+    loginWithWallet,
+    loginWithWalletConnect,
     logout,
     refreshAuth,
     sendVerificationCode,
