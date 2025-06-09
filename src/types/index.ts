@@ -187,6 +187,8 @@ export interface WalletConnectConfig {
   chain?: any;
   testWallet?: TestWallet;
   walletConnectUri?: string;
+  walletAddress?: string;
+  signature?: string;
   // Social authentication data
   socialProvider?: string;
   socialProfile?: {
