@@ -9,9 +9,14 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { useWalletImage, useWalletInfo } from 'thirdweb/react';
 import { Apple } from '../../../constants/AppleDesign';
 import { LinkedAccount } from '../../types';
+
+const WALLET_ICONS: Record<string, { icon: string; name: string }> = {
+  metamask: { icon: '🦊', name: 'MetaMask' },
+  coinbase: { icon: '🪙', name: 'Coinbase' },
+  walletconnect: { icon: '🔗', name: 'WalletConnect' },
+};
 
 interface SwipeableAccountRowProps {
   account: LinkedAccount | any;
@@ -29,8 +34,6 @@ export const SwipeableAccountRow: React.FC<SwipeableAccountRowProps> = ({
   const translateX = useRef(new Animated.Value(0)).current;
   const deleteButtonWidth = 80;
   
-  const { data: walletImage } = useWalletImage(account.walletType || 'unknown');
-  const { data: walletInfo } = useWalletInfo(account.walletType || 'unknown');
 
   const panResponder = useRef(
     PanResponder.create({
@@ -72,7 +75,7 @@ export const SwipeableAccountRow: React.FC<SwipeableAccountRowProps> = ({
 
   const getAccountIcon = () => {
     if (isLinkedAccount) {
-      return walletImage || '👛';
+      return WALLET_ICONS[account.walletType]?.icon || '👛';
     } else {
       // Thirdweb social profile
       switch (account.type) {
@@ -89,7 +92,12 @@ export const SwipeableAccountRow: React.FC<SwipeableAccountRowProps> = ({
 
   const getAccountName = () => {
     if (isLinkedAccount) {
-      return account.customName || walletInfo?.name || account.walletType || 'Wallet';
+      return (
+        account.customName ||
+        WALLET_ICONS[account.walletType]?.name ||
+        account.walletType ||
+        'Wallet'
+      );
     } else {
       return account.details?.email || account.details?.phone || account.type;
     }
