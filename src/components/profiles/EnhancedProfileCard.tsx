@@ -6,10 +6,15 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { useWalletImage, useWalletInfo } from 'thirdweb/react';
 import { Colors } from '../../../constants/Colors';
 import { useColorScheme } from '../../../hooks/useColorScheme';
 import { SmartProfile, LinkedAccount } from '../../types';
+
+const WALLET_ICONS: Record<string, { icon: string; name: string }> = {
+  metamask: { icon: '🦊', name: 'MetaMask' },
+  coinbase: { icon: '🪙', name: 'Coinbase' },
+  walletconnect: { icon: '🔗', name: 'WalletConnect' },
+};
 
 interface EnhancedProfileCardProps {
   profile: SmartProfile;
@@ -26,8 +31,6 @@ interface AccountRowProps {
 
 const AccountRow: React.FC<AccountRowProps> = ({ account, isLinkedAccount = true }) => {
   const colorScheme = useColorScheme();
-  const { data: walletImage } = useWalletImage(account.walletType || 'unknown');
-  const { data: walletInfo } = useWalletInfo(account.walletType || 'unknown');
   
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -36,7 +39,7 @@ const AccountRow: React.FC<AccountRowProps> = ({ account, isLinkedAccount = true
   const getAccountIcon = () => {
     if (isLinkedAccount) {
       // Backend linked account (wallet)
-      return walletImage || '👛';
+      return WALLET_ICONS[account.walletType]?.icon || '👛';
     } else {
       // Thirdweb social profile
       switch (account.type) {
@@ -53,7 +56,12 @@ const AccountRow: React.FC<AccountRowProps> = ({ account, isLinkedAccount = true
   
   const getAccountName = () => {
     if (isLinkedAccount) {
-      return account.customName || walletInfo?.name || account.walletType || 'Wallet';
+      return (
+        account.customName ||
+        WALLET_ICONS[account.walletType]?.name ||
+        account.walletType ||
+        'Wallet'
+      );
     } else {
       return account.details?.email || account.details?.phone || account.type;
     }

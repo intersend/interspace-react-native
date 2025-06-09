@@ -25,7 +25,8 @@ export default function FloatingTestWallet({
   const { isDevelopment, hasActiveWallet, pendingCount } = useTestWallet();
   const [showModal, setShowModal] = useState(false);
 
-  // Don't render in production or staging
+  // `useTestWallet` exposes `isDevelopment` based on `__DEV__`. This ensures
+  // the floating test wallet never appears in production or staging builds.
   if (!isDevelopment) {
     return null;
   }

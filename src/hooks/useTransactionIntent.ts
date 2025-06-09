@@ -3,6 +3,7 @@ import { useProfiles } from './useProfiles';
 import { useActiveAccount } from 'thirdweb/react';
 import { useSessionWallet } from '../contexts/SessionWalletContext';
 import { orbyService } from '../services/orby';
+import { useSignMessage } from '../contexts/SessionWalletContext';
 import {
   TransactionIntent,
   IntentResponse,
@@ -44,6 +45,7 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
   const { activeProfile } = useProfiles();
   const activeAccount = useActiveAccount();
   const { signWithSessionWallet } = useSessionWallet();
+  const signMessage = useSignMessage();
   
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
@@ -141,7 +143,7 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
         setIsSubmitting(false);
       }
     },
-    [activeAccount]
+    [activeAccount, signMessage]
   );
 
   const trackOperation = useCallback(

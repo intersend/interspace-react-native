@@ -18,9 +18,14 @@ import { SmartProfile, LinkedAccount } from '@/src/types';
 import { useLinkedAccounts } from '@/src/hooks/useLinkedAccounts';
 import { useTestWallet } from '@/src/hooks/useTestWallet';
 import { useProfiles } from '@/src/hooks/useProfiles';
-import { useWalletImage } from 'thirdweb/react';
 import * as Clipboard from 'expo-clipboard';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+
+const WALLET_ICONS: Record<string, { icon: string; name: string }> = {
+  metamask: { icon: '🦊', name: 'MetaMask' },
+  coinbase: { icon: '🪙', name: 'Coinbase' },
+  walletconnect: { icon: '🔗', name: 'WalletConnect' },
+};
 
 interface ProfileDetailScreenProps {
   visible: boolean;
@@ -36,7 +41,6 @@ const AccountRow: React.FC<{
   onSetPrimary: () => void;
   onDelete: () => void;
 }> = ({ account, isPrimary, onSetPrimary, onDelete }) => {
-  const { data: walletImage } = useWalletImage(account.walletType as any);
   
   const renderRightActions = () => (
     <TouchableOpacity
@@ -51,16 +55,7 @@ const AccountRow: React.FC<{
   );
 
   const getWalletIcon = (walletType: string) => {
-    switch (walletType) {
-      case 'metamask':
-        return '🦊';
-      case 'coinbase':
-        return '🪙';
-      case 'walletconnect':
-        return '🔗';
-      default:
-        return '👛';
-    }
+    return WALLET_ICONS[walletType]?.icon || '👛';
   };
 
   const formatAddress = (address: string) => {
@@ -84,7 +79,10 @@ const AccountRow: React.FC<{
         
         <View style={styles.accountInfo}>
           <Text style={styles.accountName}>
-            {account.customName || account.walletType || 'External Wallet'}
+            {account.customName ||
+              WALLET_ICONS[account.walletType]?.name ||
+              account.walletType ||
+              'External Wallet'}
           </Text>
           <Text style={styles.accountAddress}>{formatAddress(account.address)}</Text>
         </View>

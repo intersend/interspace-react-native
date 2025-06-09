@@ -16,8 +16,7 @@ import { Apple } from '../../../constants/AppleDesign';
 import { useAuth } from '../../hooks/useAuth';
 import { WalletConnectConfig } from '../../types';
 import * as Haptics from 'expo-haptics';
-import { hasStoredPasskey } from 'thirdweb/wallets/in-app';
-import { client } from '../../../constants/silencelabs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppleContactAuthModal from './AppleContactAuthModal';
 import AppleBottomTray from '../ui/AppleBottomTray';
 
@@ -66,10 +65,12 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     ]).start();
   }, []);
 
+  const PASSKEY_KEY = 'interspace_has_passkey';
+
   const checkPasskey = async () => {
     try {
-      const stored = await hasStoredPasskey(client);
-      setHasPasskey(stored);
+      const stored = await AsyncStorage.getItem(PASSKEY_KEY);
+      setHasPasskey(stored === 'true');
     } catch (error) {
       console.error('Failed to check passkey:', error);
     }
@@ -99,13 +100,15 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
     setIsLoading(true);
     
     try {
-      const stored = await hasStoredPasskey(client);
+      const storedFlag = await AsyncStorage.getItem(PASSKEY_KEY);
+      const stored = storedFlag === 'true';
       const config: WalletConnectConfig = {
         strategy: 'passkey',
       };
 
       await login(config);
       if (!stored) {
+        await AsyncStorage.setItem(PASSKEY_KEY, 'true');
         console.log('🆕 Passkey setup completed');
       }
       onAuthSuccess?.();

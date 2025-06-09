@@ -14,7 +14,8 @@ export default function TestWalletSystem() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { isDevelopment } = useTestWallet();
 
-  // Don't render in production
+  // `isDevelopment` is derived from the global `__DEV__` flag, so this entire
+  // system is stripped from production builds.
   if (!isDevelopment) {
     return null;
   }
