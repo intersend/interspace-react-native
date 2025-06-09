@@ -6,9 +6,9 @@ import {
 } from '@silencelaboratories/react-native-duo-sdk';
 
 interface SessionWalletContextValue {
-  generateKey: ReturnType<typeof useECDSAKeyGen>['generateKey'];
-  signWithSessionWallet: ReturnType<typeof useGenECDSASign>['sign'];
-  rotateSessionKey: ReturnType<typeof useECDSAKeyRefresh>['refreshKey'];
+  generateDeviceShare: ReturnType<typeof useECDSAKeyGen>['generateKey'];
+  signMessage: ReturnType<typeof useGenECDSASign>['sign'];
+  rotateKey: ReturnType<typeof useECDSAKeyRefresh>['refreshKey'];
   address?: string;
 }
 
@@ -26,9 +26,9 @@ export function SessionWalletProvider({ children }: Props) {
   return (
     <SessionWalletContext.Provider
       value={{
-        generateKey,
-        signWithSessionWallet: sign,
-        rotateSessionKey: refreshKey,
+        generateDeviceShare: generateKey,
+        signMessage: sign,
+        rotateKey: refreshKey,
         address: keyPair?.address,
       }}
     >
@@ -43,4 +43,19 @@ export function useSessionWallet() {
     throw new Error('useSessionWallet must be used within a SessionWalletProvider');
   }
   return ctx;
+}
+
+export function useGenerateDeviceShare() {
+  const { generateDeviceShare } = useSessionWallet();
+  return generateDeviceShare;
+}
+
+export function useSignMessage() {
+  const { signMessage } = useSessionWallet();
+  return signMessage;
+}
+
+export function useRotateKey() {
+  const { rotateKey } = useSessionWallet();
+  return rotateKey;
 }
