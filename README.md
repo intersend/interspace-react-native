@@ -10,11 +10,16 @@ Interspace is a wallet wrapper that allows users to:
 - Organize accounts into smartprofiles (Trading, Gaming, Payments, etc.)
 - Access Web3 apps through an iPhone-style home screen interface
 
+Interspace uses a first-party authentication flow. When users log in with Google,
+Apple, email, or passkey, a new wallet is created through the Silence Labs Duo
+node and linked to their account. Authentication tokens are issued by the
+Interspace backend and stored securely on the device.
+
 ## 🛠 Tech Stack
 
 - **Frontend**: React Native (fully custom UI)
-- **Backend/Wallet Infrastructure**: Thirdweb (React Hooks only, no built-in UI components)
-- **Authentication**: Thirdweb provider for EVM
+- **Backend/Wallet Infrastructure**: Interspace backend with a Silence Labs Duo node
+- **Authentication**: First-party JWT flow with wallet creation through Silence Labs
 - **Wallet Proxy Standard**: ERC-7702 proxy accounts for delegation and transaction handling
 
 ## 📱 Key Features
@@ -44,7 +49,7 @@ Interspace is a wallet wrapper that allows users to:
 - Node.js (v16 or higher)
 - React Native development environment
 - iOS Simulator or Android Emulator
-- Thirdweb client ID
+- GitHub personal access token for Silence Labs packages
 
 ### Installation
 
@@ -54,34 +59,42 @@ git clone https://github.com/yourusername/interspace-react-native.git
 cd interspace-react-native
 ```
 
-2. Install dependencies:
+2. Configure npm for Silence Labs packages:
+```bash
+cat <<'EOF' > .npmrc
+@silencelaboratories:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=<YOUR_GITHUB_TOKEN>
+EOF
+```
+
+3. Install dependencies:
 ```bash
 npm install
 # or
 yarn install
 ```
 
-3. Set up environment variables:
+4. Set up environment variables:
 ```bash
 cp .env.example .env
 ```
-Edit `.env` and add your Thirdweb client ID:
+Edit `.env` and configure endpoints:
 ```
-EXPO_PUBLIC_THIRDWEB_CLIENT_ID=your_client_id_here
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
+EXPO_PUBLIC_SILENCELABS_NODE_URL=https://api.silencelabs.org
 ```
-
-4. Prebuild native directories:
+5. Prebuild native directories:
 ```bash
 npx expo prebuild
 ```
 
-5. Start the backend server (required):
+6. Start the backend server (required):
 ```bash
 # Make sure the backend is running on http://localhost:3000
 # See backend repository for setup instructions
 ```
 
-6. Run the app:
+7. Run the app:
 ```bash
 # iOS
 yarn ios
@@ -133,7 +146,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For help with:
 - **Backend API**: See backend repository documentation
-- **Thirdweb SDK**: Visit [Thirdweb Documentation](https://portal.thirdweb.com)
+- **Silence Labs SDK**: Check your private documentation
 - **React Native**: Check [React Native Documentation](https://reactnative.dev)
 
 ## 🔗 Related Repositories
