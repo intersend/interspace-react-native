@@ -1,6 +1,5 @@
-import { privateKeyToAccount } from 'thirdweb/wallets';
-import { createWallet, inAppWallet } from 'thirdweb/wallets';
-import { client, DEFAULT_TESTNET_CHAIN } from '../../constants/silencelabs';
+import { Wallet } from 'ethers';
+import { DEFAULT_TESTNET_CHAIN } from '../../constants/silencelabs';
 
 /**
  * Generate a random private key for testing
@@ -48,17 +47,12 @@ export async function generateTestWallet(
     // Generate a new private key
     const privateKey = generatePrivateKey();
     
-    // Create account from private key
-    const account = privateKeyToAccount({
-      client,
-      privateKey,
-    });
+    // Create ethers wallet from private key
+    const wallet = new Wallet(privateKey);
+    (wallet as any).getAddress = () => wallet.address;
 
-    // Create wallet from private key
-    const wallet = createWallet('io.metamask'); // Using MetaMask as default for testing
-    
     const testWallet: TestWallet = {
-      address: account.address,
+      address: wallet.address,
       privateKey,
       wallet,
     };
@@ -90,17 +84,12 @@ export async function createWalletFromPrivateKey(
   try {
     console.log('🔑 Creating wallet from private key...');
 
-    // Create account from existing private key
-    const account = privateKeyToAccount({
-      client,
-      privateKey,
-    });
+    // Create ethers wallet from existing private key
+    const wallet = new Wallet(privateKey);
+    (wallet as any).getAddress = () => wallet.address;
 
-    // Create wallet
-    const wallet = createWallet('io.metamask');
-    
     const testWallet: TestWallet = {
-      address: account.address,
+      address: wallet.address,
       privateKey,
       wallet,
     };
