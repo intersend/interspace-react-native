@@ -16,6 +16,7 @@ import { UnifiedToken } from '../../types/orby';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { orbyService } from '../../services/orby';
+import { useProfiles } from '../../hooks/useProfiles';
 
 interface SwapInputModalProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export default function SwapInputModal({
   onPreview,
 }: SwapInputModalProps) {
   const colorScheme = useColorScheme();
+  const { activeProfile } = useProfiles();
   const [fromToken, setFromToken] = useState<UnifiedToken | undefined>(undefined);
   const [toToken, setToToken] = useState<UnifiedToken | undefined>(undefined);
   const [fromAmount, setFromAmount] = useState('');
@@ -69,23 +71,45 @@ export default function SwapInputModal({
     }
   }, [visible, tokens]);
 
-  // Calculate exchange rate (mock for now)
+  // Fetch swap quote from backend
   useEffect(() => {
-    if (fromAmount && fromToken && toToken) {
-      setIsCalculating(true);
-      
-      // Mock exchange rate calculation
-      setTimeout(() => {
-        const fromUsdValue = parseFloat(fromToken.totalUsdValue) / (parseFloat(fromToken.totalAmount) / Math.pow(10, fromToken.decimals));
-        const toUsdValue = parseFloat(toToken.totalUsdValue) / (parseFloat(toToken.totalAmount) / Math.pow(10, toToken.decimals));
-        const rate = fromUsdValue / toUsdValue;
-        const calculatedToAmount = parseFloat(fromAmount) * rate;
-        
-        setToAmount(calculatedToAmount.toFixed(toToken.decimals === 18 ? 4 : 2));
-        setIsCalculating(false);
-      }, 500);
-    }
-  }, [fromAmount, fromToken, toToken]);
+    let cancelled = false;
+
+    const fetchQuote = async () => {
+      if (fromAmount && fromToken && toToken && activeProfile?.id) {
+        setIsCalculating(true);
+        try {
+          const quote = await orbyService.getSwapQuote(
+            activeProfile.id,
+            fromToken.symbol,
+            toToken.symbol,
+            fromAmount
+          );
+
+          if (!cancelled) {
+            setToAmount(
+              parseFloat(quote.toAmount).toFixed(
+                toToken.decimals === 18 ? 4 : 2
+              )
+            );
+          }
+        } catch (err) {
+          if (!cancelled) {
+            console.error('Failed to get swap quote:', err);
+            setToAmount('');
+          }
+        } finally {
+          if (!cancelled) setIsCalculating(false);
+        }
+      }
+    };
+
+    fetchQuote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fromAmount, fromToken, toToken, activeProfile?.id]);
 
   const handleSwapTokens = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
