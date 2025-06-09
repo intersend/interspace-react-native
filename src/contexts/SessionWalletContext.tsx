@@ -7,8 +7,8 @@ import {
 
 interface SessionWalletContextValue {
   generateKey: ReturnType<typeof useECDSAKeyGen>['generateKey'];
-  sign: ReturnType<typeof useGenECDSASign>['sign'];
-  refreshKey: ReturnType<typeof useECDSAKeyRefresh>['refreshKey'];
+  signWithSessionWallet: ReturnType<typeof useGenECDSASign>['sign'];
+  rotateSessionKey: ReturnType<typeof useECDSAKeyRefresh>['refreshKey'];
   address?: string;
 }
 
@@ -25,7 +25,12 @@ export function SessionWalletProvider({ children }: Props) {
 
   return (
     <SessionWalletContext.Provider
-      value={{ generateKey, sign, refreshKey, address: keyPair?.address }}
+      value={{
+        generateKey,
+        signWithSessionWallet: sign,
+        rotateSessionKey: refreshKey,
+        address: keyPair?.address,
+      }}
     >
       {children}
     </SessionWalletContext.Provider>

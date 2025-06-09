@@ -466,6 +466,28 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Session Wallet Management
+  async getSessionWalletToken(profileId: string): Promise<{ token: string }> {
+    const response = await this.requestWithRefresh<{ token: string }>(
+      `/profiles/${profileId}/session-wallet/token`
+    );
+    return response.data;
+  }
+
+  async finalizeSessionWallet(
+    profileId: string,
+    keyShare: string
+  ): Promise<{ address: string }> {
+    const response = await this.requestWithRefresh<{ address: string }>(
+      `/profiles/${profileId}/session-wallet`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ keyShare }),
+      }
+    );
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

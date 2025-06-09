@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { SmartProfile, UseProfilesReturn } from '../types';
 import { useSessionWallet } from '../contexts/SessionWalletContext';
+import {
+  ECDSAP1PartyKeys,
+  keyGenECDSA,
+} from '@silencelaboratories/react-native-duo-sdk';
 
 export function useProfiles(): UseProfilesReturn {
   const [profiles, setProfiles] = useState<SmartProfile[]>([]);
@@ -9,7 +13,7 @@ export function useProfiles(): UseProfilesReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { generateKey, refreshKey } = useSessionWallet();
+  const { rotateSessionKey } = useSessionWallet();
 
   // Fetch profiles from backend
   const fetchProfiles = useCallback(async () => {
@@ -118,13 +122,20 @@ export function useProfiles(): UseProfilesReturn {
       const newProfile = await apiService.createProfile(name);
       console.log('✅ Backend profile created:', newProfile.id);
       
-      // Step 3: Generate a session key for this profile
+      // Step 3: Generate a session wallet key share with Silence Labs
       try {
-        await generateKey();
-        console.log('✅ Session wallet key generated');
+        const { token } = await apiService.getSessionWalletToken(newProfile.id);
+        const keys = await ECDSAP1PartyKeys.create();
+        const keyShare = await keyGenECDSA(keys, token);
+        const { address } = await apiService.finalizeSessionWallet(
+          newProfile.id,
+          keyShare
+        );
+        newProfile.sessionWalletAddress = address;
+        console.log('✅ Session wallet generated:', address);
       } catch (walletError: any) {
-        console.error('⚠️ Failed to generate session key:', walletError);
-        // Continue without key - user can still link external wallets
+        console.error('⚠️ Failed to generate session wallet:', walletError);
+        // Continue without wallet - user can still link external wallets
       }
       
       // Step 4: Add to local state
@@ -137,7 +148,7 @@ export function useProfiles(): UseProfilesReturn {
       setError(err.message || 'Failed to create profile');
       throw err;
     }
-  }, [profiles, generateKey]);
+  }, [profiles]);
 
   // Update profile
   const updateProfile = useCallback(async (
@@ -213,7 +224,7 @@ export function useProfiles(): UseProfilesReturn {
       
       // Refresh session wallet key
       try {
-        await refreshKey();
+        await rotateSessionKey();
         console.log('✅ Session wallet refreshed');
       } catch (walletError) {
         console.error('⚠️ Failed to refresh session wallet:', walletError);
@@ -226,7 +237,7 @@ export function useProfiles(): UseProfilesReturn {
       setError(err.message || 'Failed to switch profile');
       throw err;
     }
-  }, [profiles, refreshKey]);
+  }, [profiles, rotateSessionKey]);
 
   // Keep legacy activateProfile for backward compatibility
   const activateProfile = switchToProfile;
