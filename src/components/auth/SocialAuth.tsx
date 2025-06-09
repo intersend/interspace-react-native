@@ -24,7 +24,8 @@ interface SocialProvider {
   textColor: string;
   strategy:
     | 'google'
-    | 'apple';
+    | 'apple'
+    | 'passkey';
 }
 
 const SOCIAL_PROVIDERS: SocialProvider[] = [
@@ -43,6 +44,14 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
     backgroundColor: Colors.dark.socialGoogle,
     textColor: Colors.dark.textInverted,
     strategy: 'google',
+  },
+  {
+    id: 'passkey',
+    name: 'Continue with Passkey',
+    icon: '🔐',
+    backgroundColor: Colors.dark.tint,
+    textColor: Colors.dark.textInverted,
+    strategy: 'passkey',
   },
 ];
 

@@ -28,7 +28,8 @@ interface SocialProvider {
   icon: string;
   strategy:
     | 'google'
-    | 'apple';
+    | 'apple'
+    | 'passkey';
   primary?: boolean;
 }
 
@@ -45,6 +46,12 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
     name: 'Continue with Google',
     icon: '🔍',
     strategy: 'google',
+  },
+  {
+    id: 'passkey',
+    name: 'Continue with Passkey',
+    icon: '🔐',
+    strategy: 'passkey',
   },
 ];
 
@@ -268,6 +275,15 @@ export default function CleanAuthScreen({ onAuthSuccess }: CleanAuthScreenProps)
           size="medium"
           fullWidth
           onPress={() => handleSocialLogin(SOCIAL_PROVIDERS[1])}
+          style={styles.secondaryOption}
+        />
+
+        <AppleButton
+          title="🔐 Continue with Passkey"
+          variant="tertiary"
+          size="medium"
+          fullWidth
+          onPress={() => handleSocialLogin(SOCIAL_PROVIDERS[2])}
           style={styles.secondaryOption}
         />
       </View>
