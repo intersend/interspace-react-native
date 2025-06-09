@@ -19,7 +19,6 @@ const WALLET_ICONS: Record<string, { icon: string; name: string }> = {
 interface EnhancedProfileCardProps {
   profile: SmartProfile;
   linkedAccounts: LinkedAccount[];
-  thirdwebProfiles: any[];
   onProfilePress: (profile: SmartProfile) => void;
   onActivateProfile: (profileId: string) => void;
 }
@@ -106,7 +105,6 @@ const AccountRow: React.FC<AccountRowProps> = ({ account, isLinkedAccount = true
 export const EnhancedProfileCard: React.FC<EnhancedProfileCardProps> = ({
   profile,
   linkedAccounts,
-  thirdwebProfiles,
   onProfilePress,
   onActivateProfile,
 }) => {
@@ -168,28 +166,20 @@ export const EnhancedProfileCard: React.FC<EnhancedProfileCardProps> = ({
       </View>
 
       {/* Linked Accounts Section */}
-      {(profileLinkedAccounts.length > 0 || thirdwebProfiles.length > 0) && (
+      {profileLinkedAccounts.length > 0 && (
         <View style={styles.accountsSection}>
           <Text style={[styles.sectionLabel, { color: Colors[colorScheme ?? 'dark'].tabIconDefault }]}>
             Linked Accounts
           </Text>
-          
+
           {/* Backend Linked Accounts (Wallets) */}
           {profileLinkedAccounts.map((account) => (
             <AccountRow key={account.id} account={account} isLinkedAccount={true} />
           ))}
-          
-          {/* Thirdweb Social Profiles */}
-          {thirdwebProfiles.map((profile, index) => (
-            <AccountRow key={`social-${index}`} account={profile} isLinkedAccount={false} />
-          ))}
-          
           {/* Encourage linking if no accounts */}
-          {profileLinkedAccounts.length === 0 && thirdwebProfiles.length === 0 && (
+          {profileLinkedAccounts.length === 0 && (
             <TouchableOpacity style={styles.encourageLinkButton}>
-              <Text style={[styles.encourageLinkText, { color: Colors[colorScheme ?? 'dark'].tint }]}>
-                + Link your first account
-              </Text>
+              <Text style={[styles.encourageLinkText, { color: Colors[colorScheme ?? 'dark'].tint }]}>+ Link your first account</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -199,7 +189,7 @@ export const EnhancedProfileCard: React.FC<EnhancedProfileCardProps> = ({
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: Colors[colorScheme ?? 'dark'].text }]}>
-            {profileLinkedAccounts.length + thirdwebProfiles.length}
+            {profileLinkedAccounts.length}
           </Text>
           <Text style={[styles.statLabel, { color: Colors[colorScheme ?? 'dark'].tabIconDefault }]}>
             Accounts

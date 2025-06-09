@@ -27,8 +27,6 @@ export const DEFAULT_TESTNET_CHAIN = baseSepolia;
 
 export const SMART_ACCOUNT_CONFIG = {
   gasless: true,
-  bundlerUrl: `https://${DEFAULT_CHAIN.id}.bundler.thirdweb.com`,
-  paymasterUrl: `https://${DEFAULT_CHAIN.id}.bundler.thirdweb.com`,
 };
 
 export const TOKEN_CONTRACTS = {
