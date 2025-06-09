@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { privateKeyToAccount, createWallet } from 'thirdweb/wallets';
-import { client } from '../../constants/silencelabs';
+import { Wallet } from 'ethers';
 import { TestWallet } from '../types';
 
 export interface TestTransaction {
@@ -55,33 +54,14 @@ export function useTestWallet() {
   // Create wallet instance for external authentication
   const createWalletInstance = useCallback((testWallet: TestWallet) => {
     try {
-      // Create a private key wallet instance that can be used for external wallet auth
-      const wallet = createWallet('io.metamask'); // Use a generic wallet ID
-      
-      // Create the account from private key
-      const account = privateKeyToAccount({
-        client,
-        privateKey: testWallet.privateKey,
+      // Create an ethers wallet instance
+      const wallet = new Wallet(testWallet.privateKey);
+      (wallet as any).getAccount = () => ({
+        address: wallet.address,
+        signMessage: ({ message }: { message: string }) => wallet.signMessage(message),
       });
-      
-      // Store reference to account for signing
-      (wallet as any)._testAccount = account;
-      
-      // Override the connect method to use our private key
-      const originalConnect = wallet.connect;
-      wallet.connect = async () => {
-        return account;
-      };
-      
-      // Add getAccount method that auth system expects
-      (wallet as any).getAccount = () => {
-        return account;
-      };
-      
-      // Add other methods that might be needed
-      (wallet as any).disconnect = async () => {
-        // No-op for test wallets
-      };
+      (wallet as any).connect = async () => wallet;
+      (wallet as any).disconnect = async () => {};
       
       console.log('🔗 Created wallet instance for test wallet:', testWallet.address);
       return wallet;
@@ -175,10 +155,7 @@ export function useTestWallet() {
   const createTestWallet = useCallback(async (name?: string): Promise<TestWallet> => {
     try {
       const privateKey = generatePrivateKey();
-      const account = privateKeyToAccount({
-        client,
-        privateKey,
-      });
+      const account = new Wallet(privateKey);
 
       // Create wallet instance for external authentication
       const walletInstance = createWalletInstance({

@@ -8,6 +8,7 @@ import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 import { apiService } from '../services/api';
 import { User, WalletConnectConfig, UseAuthReturn } from '../types';
+import { Wallet } from 'ethers';
 
 const AUTH_SESSION_KEY = 'interspace_session';
 
@@ -173,7 +174,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const loginWithWalletConnect = async (uri: string, onSuccess?: () => void) => {
-    const wallet = createWallet('walletConnect' as any, { uri });
+    const wallet = Wallet.createRandom();
+    (wallet as any).getAddress = () => wallet.address;
     const config: WalletConnectConfig = {
       strategy: 'wallet',
       wallet,
@@ -199,11 +201,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const testWallet = config.testWallet!;
     console.log('🧪 Authenticating test wallet with SIWE:', testWallet.address);
 
-    // Create account from private key
-    const testAccount = privateKeyToAccount({
-      client,
-      privateKey: testWallet.privateKey,
-    });
+    // Create ethers wallet from the private key
+    const testAccount = new Wallet(testWallet.privateKey);
 
     // Generate SIWE payload
     const payload = await thirdwebAuth.generatePayload({
@@ -214,19 +213,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Sign the message
     const message = `${payload.domain} wants you to sign in with your Ethereum account:\n${payload.address}\n\n${payload.statement || 'Sign in to Interspace'}\n\nURI: ${payload.uri}\nVersion: ${payload.version}\nChain ID: ${payload.chain_id}\nNonce: ${payload.nonce}\nIssued At: ${payload.issued_at}`;
     
-    const signature = await testAccount.signMessage({ message });
+    const signature = await testAccount.signMessage(message);
     console.log('✅ SIWE signature completed for test wallet');
 
     // Don't use guest wallet for session management as it persists across users
     // Instead, use the test wallet directly with external wallet strategy
     const wallet = await connect(async () => {
-      // Create a wallet instance from the test wallet
-      const testWalletInstance = createWallet('io.metamask');
-      
-      // Inject the test account into the wallet
-      (testWalletInstance as any)._testAccount = testAccount;
-      (testWalletInstance as any).getAccount = () => testAccount;
-      
+      const testWalletInstance = {
+        getAccount: () => ({
+          address: testAccount.address,
+          signMessage: ({ message }: { message: string }) => testAccount.signMessage(message),
+        }),
+        connect: async () => testAccount,
+        disconnect: async () => {},
+        id: 'ethers',
+      } as any;
+
       return testWalletInstance;
     });
 
