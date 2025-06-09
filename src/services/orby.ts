@@ -159,6 +159,23 @@ class OrbyService {
     throw new Error('Operation polling timeout');
   }
 
+  // Get swap quote for a token pair
+  async getSwapQuote(
+    profileId: string,
+    fromToken: string,
+    toToken: string,
+    amount: string
+  ): Promise<{ toAmount: string; rate: string }> {
+    try {
+      return await this.makeRequest<{ toAmount: string; rate: string }>(
+        `/profiles/${profileId}/swap/quote?from=${fromToken}&to=${toToken}&amount=${amount}`
+      );
+    } catch (error) {
+      console.error('Failed to get swap quote:', error);
+      throw error;
+    }
+  }
+
   // Get gas token options for a profile
   async getGasTokenOptions(profileId: string): Promise<{
     suggestedToken: string;

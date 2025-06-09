@@ -26,6 +26,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Apple } from '@/constants/AppleDesign';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiService } from '../../services/api';
+import { useProfiles } from '../../hooks/useProfiles';
 
 interface IOSSearchScreenProps {
   visible: boolean;
@@ -36,19 +39,7 @@ interface IOSSearchScreenProps {
 
 const { width, height } = Dimensions.get('window');
 
-// Mock data for Siri Suggestions
-const SIRI_SUGGESTIONS = [
-  { id: '1', name: 'Fileverse', icon: 'logo-snapchat', color: '#FFFC00' },
-  { id: '2', name: 'Bank', icon: 'business', color: '#003087' },
-  { id: '3', name: 'YouTube', icon: 'logo-youtube', color: '#FF0000' },
-  { id: '4', name: 'Farcaster', icon: 'chatbubbles', color: '#8B5CF6' },
-];
-
-// Mock recent searches
-const RECENT_SEARCHES = [
-  { id: '1', query: 'hyoerliquid' },
-  { id: '2', query: 'defi' },
-];
+// Siri suggestions and settings
 
 // Mock settings
 const SETTINGS_ITEMS = [
@@ -75,13 +66,38 @@ export function IOSSearchScreen({
   onSearch,
 }: IOSSearchScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState(RECENT_SEARCHES);
+  const [recentSearches, setRecentSearches] = useState<{ id: string; query: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const inputRef = useRef<TextInput>(null);
+  const { activeProfile } = useProfiles();
   
   const translateY = useSharedValue(height);
   const opacity = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Load suggestions and recent searches
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('recent_searches');
+        if (stored) setRecentSearches(JSON.parse(stored));
+      } catch {}
+
+      if (activeProfile?.id) {
+        try {
+          const apps = await apiService.getApps(activeProfile.id);
+          setSuggestions(
+            apps.slice(0, 4).map(a => ({ id: a.id, name: a.name, icon: 'apps', color: 'rgba(120,120,128,0.3)' }))
+          );
+        } catch (err) {
+          console.error('Failed to load suggestions:', err);
+        }
+      }
+    };
+
+    load();
+  }, [activeProfile?.id]);
 
   useEffect(() => {
     if (visible) {
@@ -141,10 +157,14 @@ export function IOSSearchScreen({
     if (searchQuery.trim()) {
       onSearch(searchQuery.trim());
       // Add to recent searches
-      setRecentSearches(prev => [
-        { id: Date.now().toString(), query: searchQuery.trim() },
-        ...prev.filter(s => s.query !== searchQuery.trim()).slice(0, 4),
-      ]);
+      setRecentSearches(prev => {
+        const updated = [
+          { id: Date.now().toString(), query: searchQuery.trim() },
+          ...prev.filter(s => s.query !== searchQuery.trim()).slice(0, 4),
+        ];
+        AsyncStorage.setItem('recent_searches', JSON.stringify(updated));
+        return updated;
+      });
     }
   };
 
@@ -158,6 +178,7 @@ export function IOSSearchScreen({
   const handleClearRecent = () => {
     hapticTrigger('impactLight');
     setRecentSearches([]);
+    AsyncStorage.removeItem('recent_searches');
   };
 
   const handleToggle = (itemId: string) => {
@@ -213,7 +234,7 @@ export function IOSSearchScreen({
                 
                 <View style={styles.suggestionsContainer}>
                   <View style={styles.suggestionsRow}>
-                    {SIRI_SUGGESTIONS.map((app) => (
+                    {suggestions.map((app) => (
                       <TouchableOpacity
                         key={app.id}
                         style={styles.suggestionItem}

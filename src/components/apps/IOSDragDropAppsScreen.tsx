@@ -21,6 +21,8 @@ import { SafariBrowser } from '@/src/components/apps/SafariBrowser';
 import { IOSDeleteConfirmation } from '@/src/components/apps/IOSDeleteConfirmation';
 import { IOSGridLayoutManager, GRID_CONFIG } from '@/src/components/apps/IOSGridLayoutManager';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
+import { apiService } from '../../services/api';
+import { useProfiles } from '../../hooks/useProfiles';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -93,41 +95,31 @@ export default function IOSDragDropAppsScreen() {
   const pageIndicatorOpacity = useSharedValue(0.6);
   const widgetOpacity = useSharedValue(1);
 
-  // Initialize with mock data
+  const { activeProfile } = useProfiles();
+
+  // Load apps and folders from backend
   useEffect(() => {
-    const mockApps: App[] = [
-      { id: 'app-1', name: 'Aave', url: 'https://app.aave.com', position: 0 },
-      { id: 'app-2', name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz', position: 1 },
-      { id: 'app-3', name: 'Jumper', url: 'https://jumper.exchange', position: 2 },
-      { id: 'app-4', name: 'Uniswap', url: 'https://app.uniswap.org', position: 0, folderId: 'folder-defi' },
-      { id: 'app-5', name: 'Compound', url: 'https://app.compound.finance', position: 1, folderId: 'folder-defi' },
-      { id: 'app-6', name: 'Curve', url: 'https://curve.fi', position: 2, folderId: 'folder-defi' },
-      { id: 'app-7', name: 'SushiSwap', url: 'https://app.sushi.com', position: 3, folderId: 'folder-defi' },
-      { id: 'app-8', name: 'Balancer', url: 'https://app.balancer.fi', position: 4, folderId: 'folder-defi' },
-      { id: 'app-9', name: '1inch', url: 'https://app.1inch.io', position: 5, folderId: 'folder-defi' },
-      { id: 'app-10', name: 'OpenSea', url: 'https://opensea.io', position: 4 },
-      { id: 'app-11', name: 'Blur', url: 'https://blur.io', position: 5 },
-      { id: 'app-12', name: 'dYdX', url: 'https://dydx.exchange', position: 6 },
-      { id: 'app-13', name: 'GMX', url: 'https://app.gmx.io', position: 7 },
-      { id: 'app-14', name: 'Hop', url: 'https://app.hop.exchange', position: 8 },
-      { id: 'app-15', name: 'Across', url: 'https://app.across.to', position: 9 },
-    ];
+    const loadData = async () => {
+      if (!activeProfile?.id) return;
+      try {
+        const [appsData, foldersData] = await Promise.all([
+          apiService.getApps(activeProfile.id),
+          apiService.getFolders(activeProfile.id)
+        ]);
 
-    const deFiApps = mockApps.filter(app => app.folderId === 'folder-defi');
-    
-    const mockFolders: Folder[] = [
-      {
-        id: 'folder-defi',
-        name: 'DeFi',
-        color: Apple.Colors.systemBlue,
-        position: 3,
-        apps: deFiApps,
-      },
-    ];
+        setApps(appsData);
+        const foldersWithApps = foldersData.map(f => ({
+          ...f,
+          apps: appsData.filter(a => a.folderId === f.id).sort((a,b) => a.position - b.position)
+        }));
+        setFolders(foldersWithApps);
+      } catch (err) {
+        console.error('Failed to load apps/folders:', err);
+      }
+    };
 
-    setApps(mockApps);
-    setFolders(mockFolders);
-  }, []);
+    loadData();
+  }, [activeProfile?.id]);
 
   // Update grid positions when apps/folders change
   useEffect(() => {
