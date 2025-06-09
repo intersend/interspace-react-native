@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { SmartProfile, UseProfilesReturn } from '../types';
-import { useSessionWallet } from '../contexts/SessionWalletContext';
 import {
-  ECDSAP1PartyKeys,
-  keyGenECDSA,
-} from '@silencelaboratories/react-native-duo-sdk';
+  useGenerateDeviceShare,
+  useRotateKey,
+} from '../contexts/SessionWalletContext';
 
 export function useProfiles(): UseProfilesReturn {
   const [profiles, setProfiles] = useState<SmartProfile[]>([]);
@@ -13,7 +12,8 @@ export function useProfiles(): UseProfilesReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { rotateSessionKey } = useSessionWallet();
+  const generateDeviceShare = useGenerateDeviceShare();
+  const rotateKey = useRotateKey();
 
   // Fetch profiles from backend
   const fetchProfiles = useCallback(async () => {
@@ -125,8 +125,7 @@ export function useProfiles(): UseProfilesReturn {
       // Step 3: Generate a session wallet key share with Silence Labs
       try {
         const { token } = await apiService.getSessionWalletToken(newProfile.id);
-        const keys = await ECDSAP1PartyKeys.create();
-        const keyShare = await keyGenECDSA(keys, token);
+        const keyShare = await generateDeviceShare(token);
         const { address } = await apiService.finalizeSessionWallet(
           newProfile.id,
           keyShare
@@ -224,7 +223,7 @@ export function useProfiles(): UseProfilesReturn {
       
       // Refresh session wallet key
       try {
-        await rotateSessionKey();
+        await rotateKey();
         console.log('✅ Session wallet refreshed');
       } catch (walletError) {
         console.error('⚠️ Failed to refresh session wallet:', walletError);
@@ -237,7 +236,7 @@ export function useProfiles(): UseProfilesReturn {
       setError(err.message || 'Failed to switch profile');
       throw err;
     }
-  }, [profiles, rotateSessionKey]);
+  }, [profiles, rotateKey]);
 
   // Keep legacy activateProfile for backward compatibility
   const activateProfile = switchToProfile;
