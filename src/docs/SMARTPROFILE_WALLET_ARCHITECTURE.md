@@ -22,7 +22,7 @@ Interspace App
 │       ├── Linked EOAs: [Test Wallet]
 │       └── Social Profiles: [Google, Apple]
 │
-└── Session Wallet (ERC-7702)
+└── Silence Labs Session Wallet (ERC-7702)
     └── Backend-managed proxy for transactions
 ```
 
@@ -59,7 +59,7 @@ When a profile is created:
 When switching profiles:
 1. Disconnect current wallet
 2. Connect to new profile's wallet using its unique storage
-3. All Thirdweb profiles (social accounts) automatically switch
+3. All linked social accounts automatically switch
 
 ### 4. Social Account Linking
 
@@ -100,7 +100,7 @@ POST /profiles/:profileId/sync-social
    - `connectToProfileWallet()` for profile switching
    - Profile wallet connection during authentication
 
-4. **src/hooks/useThirdwebProfiles.ts**
+4. **src/hooks/useSocialProfiles.ts**
    - `linkSocialProfile()` syncs with backend
    - Proper error handling for wallet context
    - Profile-specific social account management
@@ -110,7 +110,7 @@ POST /profiles/:profileId/sync-social
 1. **Complete Isolation**: Each profile's social accounts are isolated
 2. **No Cross-Contamination**: Different users can't see each other's social accounts
 3. **Persistent Wallets**: No more ephemeral wallets that cause issues
-4. **Natural Architecture**: Leverages Thirdweb's design patterns
+4. **Natural Architecture**: Leverages session wallet design patterns
 5. **Backend Sync**: Social profiles properly stored per SmartProfile
 
 ## Usage Examples
@@ -136,7 +136,7 @@ await switchToProfile(profileId);
 ### Linking Social Accounts
 
 ```typescript
-const { linkSocialProfile } = useThirdwebProfiles();
+const { linkSocialProfile } = useSocialProfiles();
 
 // Links to active profile and syncs with backend
 await linkSocialProfile('discord');

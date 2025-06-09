@@ -2,7 +2,7 @@
 
 ## Overview
 
-When a user logs in with a social account (Telegram, Google, Discord, etc.), that social wallet becomes the profile's session wallet. This ensures social accounts are permanently associated with profiles.
+When a user logs in with a social account (Telegram, Google, Discord, etc.), that social wallet becomes the profile's session wallet. This session wallet is provided by Silence Labs and ensures social accounts are permanently associated with profiles.
 
 ## Previous Issue
 
@@ -32,7 +32,7 @@ When a user logs in with a social account (Telegram, Google, Discord, etc.), tha
 ### Returning User Flow
 
 1. **User logs in with same Telegram**
-   - Thirdweb recognizes the account
+   - The wallet provider recognizes the account
    - Returns the same wallet instance
    - Profile's wallet is restored with Telegram intact
 
