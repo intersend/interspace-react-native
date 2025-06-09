@@ -114,7 +114,6 @@ We welcome feature suggestions! Please:
 ## 📚 Resources
 
 - [React Native Documentation](https://reactnative.dev)
-- [Thirdweb Documentation](https://portal.thirdweb.com)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 
 ## ❓ Questions?

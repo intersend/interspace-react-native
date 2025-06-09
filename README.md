@@ -10,6 +10,8 @@ Interspace is a wallet wrapper that allows users to:
 - Organize accounts into smartprofiles (Trading, Gaming, Payments, etc.)
 - Access Web3 apps through an iPhone-style home screen interface
 
+### First-Party Authentication & Silence Labs Integration
+
 Interspace uses a first-party authentication flow. When users log in with Google,
 Apple, email, or passkey, a new wallet is created through the Silence Labs Duo
 node and linked to their account. Authentication tokens are issued by the
@@ -59,7 +61,7 @@ git clone https://github.com/yourusername/interspace-react-native.git
 cd interspace-react-native
 ```
 
-2. Configure npm for Silence Labs packages:
+2. Configure npm for Silence Labs packages (.npmrc):
 ```bash
 cat <<'EOF' > .npmrc
 @silencelaboratories:registry=https://npm.pkg.github.com
@@ -74,7 +76,11 @@ npm install
 yarn install
 ```
 
-4. Set up environment variables:
+4. Install wallet SDKs:
+```bash
+npm install @metamask/sdk @coinbase/wallet-mobile-sdk @rainbow-me/rainbowkit
+```
+5. Set up environment variables:
 ```bash
 cp .env.example .env
 ```
@@ -83,18 +89,18 @@ Edit `.env` and configure endpoints:
 EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
 EXPO_PUBLIC_SILENCELABS_NODE_URL=https://api.silencelabs.org
 ```
-5. Prebuild native directories:
+6. Prebuild native directories:
 ```bash
 npx expo prebuild
 ```
 
-6. Start the backend server (required):
+7. Start the backend server (required):
 ```bash
 # Make sure the backend is running on http://localhost:3000
 # See backend repository for setup instructions
 ```
 
-7. Run the app:
+8. Run the app:
 ```bash
 # iOS
 yarn ios
