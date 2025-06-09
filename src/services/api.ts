@@ -467,6 +467,24 @@ class ApiService {
     });
   }
 
+  async getTransactions(profileId: string): Promise<Transaction[]> {
+    const response = await this.requestWithRefresh<Transaction[]>(
+      `/profiles/${profileId}/transactions`
+    );
+    return response.data;
+  }
+
+  async getLinkAuthUrl(provider: string, redirectUri: string): Promise<{ authUrl: string }> {
+    const response = await this.requestWithRefresh<{ authUrl: string }>(
+      '/auth/link-auth',
+      {
+        method: 'POST',
+        body: JSON.stringify({ provider, redirectUri }),
+      }
+    );
+    return response.data;
+  }
+
   // Session Wallet Management
   async getSessionWalletToken(profileId: string): Promise<{ token: string }> {
     const response = await this.requestWithRefresh<{ token: string }>(

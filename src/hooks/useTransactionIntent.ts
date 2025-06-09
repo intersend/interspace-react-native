@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useProfiles } from './useProfiles';
 import { useActiveAccount } from 'thirdweb/react';
+import { useSessionWallet } from '../contexts/SessionWalletContext';
 import { orbyService } from '../services/orby';
 import { useSignMessage } from '../contexts/SessionWalletContext';
 import {
@@ -43,6 +44,7 @@ interface UseTransactionIntentReturn {
 export function useTransactionIntent(): UseTransactionIntentReturn {
   const { activeProfile } = useProfiles();
   const activeAccount = useActiveAccount();
+  const { signWithSessionWallet } = useSessionWallet();
   const signMessage = useSignMessage();
   
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
@@ -121,14 +123,8 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
         const signedOperations: SignedOperation[] = [];
 
         for (const operation of intent.unsignedOperations.operations) {
-          const signature = await signMessage({
-            message: JSON.stringify(operation),
-          });
-
-          signedOperations.push({
-            index: operation.index,
-            signature,
-          });
+          const signature = await signWithSessionWallet(operation.data);
+          signedOperations.push({ index: operation.index, signature });
         }
 
         setIsSigning(false);
