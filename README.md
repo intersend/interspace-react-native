@@ -140,6 +140,20 @@ interspace-react-native/
 - Explicit token allowances for transactions
 - Multi-device support with JWT authentication
 
+## 🧪 Running Tests
+
+1. Install dependencies using the provided setup script:
+
+   ```bash
+   npm run setup-tests
+   ```
+
+2. Run the test suite:
+
+   ```bash
+   npm test
+   ```
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our contributing guidelines (coming soon).
