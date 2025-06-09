@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useThirdwebProfiles } from './useThirdwebProfiles';
+import { useUserSocialAccounts } from './useUserSocialAccounts';
 import { useAuth } from './useAuth';
 import { useProfiles } from './useProfiles';
 
@@ -10,7 +10,7 @@ import { useProfiles } from './useProfiles';
 export function useAutoLinkSocial() {
   const { isAuthenticated } = useAuth();
   const { activeProfile } = useProfiles();
-  const { linkSocialProfile, linkTelegramProfile } = useThirdwebProfiles();
+  const { linkAccount } = useUserSocialAccounts();
   const hasChecked = useRef(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useAutoLinkSocial() {
           return;
         }
 
-        const { strategy, timestamp } = JSON.parse(pendingData);
+        const { provider, oauthCode, redirectUri, timestamp } = JSON.parse(pendingData);
         
         // Only process if link was marked within last 5 minutes
         const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
@@ -37,24 +37,25 @@ export function useAutoLinkSocial() {
           return;
         }
 
-        console.log(`🔗 Auto-linking ${strategy} account to profile ${activeProfile.name}...`);
+        console.log(`🔗 Auto-linking ${provider} account to profile ${activeProfile.name}...`);
         
         // Mark as checked to prevent multiple attempts
         hasChecked.current = true;
         
         // Clear the pending link first
         await AsyncStorage.removeItem('pending_social_link');
-        
-        // Perform the auto-link based on strategy
+
+        if (!oauthCode) {
+          console.warn('⚠️ Missing OAuth code for pending social link');
+          return;
+        }
+
+        // Perform the auto-link with backend
         try {
-          if (strategy === 'telegram') {
-            await linkTelegramProfile();
-          } else {
-            await linkSocialProfile(strategy);
-          }
-          console.log(`✅ Successfully auto-linked ${strategy} to profile`);
+          await linkAccount(provider, oauthCode, redirectUri);
+          console.log(`✅ Successfully auto-linked ${provider} to profile`);
         } catch (linkError: any) {
-          console.error(`❌ Failed to auto-link ${strategy}:`, linkError);
+          console.error(`❌ Failed to auto-link ${provider}:`, linkError);
           // Don't throw - user can manually link later
         }
         
@@ -67,7 +68,7 @@ export function useAutoLinkSocial() {
     const timer = setTimeout(checkAndLinkPendingSocial, 2000);
     
     return () => clearTimeout(timer);
-  }, [isAuthenticated, activeProfile?.id, linkSocialProfile, linkTelegramProfile]);
+  }, [isAuthenticated, activeProfile?.id, linkAccount]);
 
   // Reset the check flag when user logs out
   useEffect(() => {

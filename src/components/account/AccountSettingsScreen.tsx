@@ -22,6 +22,7 @@ import { ThemedView } from '../../../components/ThemedView';
 import { ThemedText } from '../../../components/ThemedText';
 import { apiService } from '../../services/api';
 import { User, SocialAccount } from '../../types';
+import { useUserSocialAccounts } from '../../hooks/useUserSocialAccounts';
 
 interface AccountSettingsScreenProps {
   visible: boolean;
@@ -33,9 +34,14 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ visible, 
   const { user: authUser, isAuthenticated, logout } = useAuth();
   
   const [user, setUser] = useState<User | null>(null);
-  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const {
+    socialAccounts,
+    isLoading: accountsLoading,
+    unlinkAccount,
+    refresh,
+  } = useUserSocialAccounts();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   // Fetch user data with social accounts
@@ -49,7 +55,6 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ visible, 
 
       const userData = await apiService.getCurrentUser();
       setUser(userData);
-      setSocialAccounts(userData.socialAccounts || []);
     } catch (error) {
       console.error('Failed to fetch user data:', error);
       Alert.alert('Error', 'Failed to load account information');
@@ -135,10 +140,9 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ visible, 
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiService.unlinkUserSocialAccount(account.id);
+              await unlinkAccount(account.id);
               Alert.alert('Success', 'Account removed successfully');
-              // Refresh user data
-              fetchUserData();
+              refresh();
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to remove account');
             }
@@ -220,7 +224,10 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ visible, 
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
-                onRefresh={() => fetchUserData(true)}
+                onRefresh={() => {
+                  fetchUserData(true);
+                  refresh();
+                }}
                 tintColor={Colors[colorScheme ?? 'dark'].tint}
               />
             }

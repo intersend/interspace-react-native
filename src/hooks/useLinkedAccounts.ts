@@ -108,37 +108,6 @@ export function useLinkedAccounts(profileId?: string): UseLinkedAccountsReturn {
       // Call backend to unlink (backend handles complete removal if last profile)
       await apiService.unlinkAccount(accountId);
       
-      // If this was a wallet-type account (EOA), also unlink from Thirdweb
-      if (accountToRemove && accountToRemove.walletType) {
-        try {
-          console.log('🔓 Unlinking wallet from Thirdweb SDK:', accountToRemove.address);
-          
-          // Import Thirdweb utilities
-          const { getProfiles } = await import('thirdweb/wallets/in-app');
-          const { client } = await import('../../constants/silencelabs');
-          const { useUnlinkProfile } = await import('thirdweb/react');
-          
-          // Get all linked profiles from Thirdweb
-          const thirdwebProfiles = await getProfiles({ client });
-          
-          // Find the wallet profile to unlink
-          const walletProfile = thirdwebProfiles.find(p => 
-            p.type === 'wallet' && 
-            p.details.address?.toLowerCase() === accountToRemove.address.toLowerCase()
-          );
-          
-          if (walletProfile) {
-            console.log('🔍 Found wallet profile in Thirdweb, unlinking...');
-            // Note: This is a simplified approach. In a real implementation,
-            // you'd need to properly handle the unlinking through the hook
-            console.log('⚠️ Wallet profile found but auto-unlinking not implemented yet');
-            // TODO: Implement proper Thirdweb unlinking when the wallet is removed from all profiles
-          }
-        } catch (thirdwebError) {
-          console.warn('⚠️ Failed to unlink from Thirdweb:', thirdwebError);
-          // Continue - backend removal succeeded
-        }
-      }
       
       // Remove from local state
       setAccounts(prev => prev.filter(acc => acc.id !== accountId));
