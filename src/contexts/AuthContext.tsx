@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const walletConnectWallet = useRef<any>(null);
 
   const isAuthenticated = authState === 'authenticated';
   const isLoading = authState === 'loading';
@@ -182,6 +183,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       walletConnectUri: uri,
     };
     await login(config, onSuccess);
+    walletConnectWallet.current = wallet;
   };
 
   const connectWallet = async (config: WalletConnectConfig) => {
@@ -819,6 +821,12 @@ Issued At: ${payload.issued_at}`;
     try {
       await apiService.logout();
     } catch {}
+    if (walletConnectWallet.current) {
+      try {
+        disconnect(walletConnectWallet.current);
+      } catch {}
+      walletConnectWallet.current = null;
+    }
     await clearAllAuthData();
     setUser(null);
     setAuthState('unauthenticated');
@@ -832,6 +840,12 @@ Issued At: ${payload.issued_at}`;
   };
 
   const handleAuthError = async (error: any) => {
+    if (walletConnectWallet.current) {
+      try {
+        disconnect(walletConnectWallet.current);
+      } catch {}
+      walletConnectWallet.current = null;
+    }
     await clearAllAuthData();
     setError(error.message || 'Authentication failed');
     setUser(null);
