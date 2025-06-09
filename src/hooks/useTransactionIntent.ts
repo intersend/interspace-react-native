@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useProfiles } from './useProfiles';
-import { useActiveAccount } from 'thirdweb/react';
-import { useSessionWallet } from '../contexts/SessionWalletContext';
-import { orbyService } from '../services/orby';
 import { useSignMessage } from '../contexts/SessionWalletContext';
+import { useLinkedAccounts } from './useLinkedAccounts';
+import { orbyService } from '../services/orby';
 import {
   TransactionIntent,
   IntentResponse,
@@ -11,7 +10,6 @@ import {
   OperationStatus,
   UnifiedToken,
 } from '../types/orby';
-import { LinkedAccount } from '../types';
 
 interface UseTransactionIntentReturn {
   // Intent creation
@@ -43,9 +41,12 @@ interface UseTransactionIntentReturn {
 
 export function useTransactionIntent(): UseTransactionIntentReturn {
   const { activeProfile } = useProfiles();
-  const activeAccount = useActiveAccount();
-  const { signWithSessionWallet } = useSessionWallet();
+  const { accounts: linkedAccounts } = useLinkedAccounts(activeProfile?.id);
   const signMessage = useSignMessage();
+  const activeLinkedAccount =
+    linkedAccounts.find((acc) => acc.isPrimary) || linkedAccounts[0];
+  const activeAccountAddress =
+    activeLinkedAccount?.address || activeProfile?.sessionWalletAddress;
   
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
@@ -111,8 +112,8 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
 
   const signAndSubmit = useCallback(
     async (intent: IntentResponse): Promise<string> => {
-      if (!activeAccount) {
-        throw new Error('No active account');
+      if (!activeAccountAddress) {
+        throw new Error('No active linked account or session wallet');
       }
 
       setIsSigning(true);
@@ -123,7 +124,7 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
         const signedOperations: SignedOperation[] = [];
 
         for (const operation of intent.unsignedOperations.operations) {
-          const signature = await signWithSessionWallet(operation.data);
+          const signature = await signMessage(operation.data);
           signedOperations.push({ index: operation.index, signature });
         }
 
@@ -143,7 +144,7 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
         setIsSubmitting(false);
       }
     },
-    [activeAccount, signMessage]
+    [activeAccountAddress, signMessage]
   );
 
   const trackOperation = useCallback(
