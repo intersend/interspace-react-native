@@ -6,7 +6,7 @@ When switching from Profile 1 (with Telegram linked) to Profile 2, the Telegram 
 
 ## Root Cause
 
-The issue was that we weren't properly managing wallet instances when switching profiles. Thirdweb maintains a single active wallet context, and we were not:
+The issue was that we weren't properly managing wallet instances when switching profiles. The system maintains a single active session wallet context, and we were not:
 1. Disconnecting the current wallet properly
 2. Creating unique wallet instances per profile
 3. Using `useSetActiveWallet()` to switch wallet contexts
@@ -20,8 +20,8 @@ A dedicated context to manage profile-specific wallet instances:
 ```typescript
 // src/contexts/ProfileWalletContext.tsx
 export function ProfileWalletProvider({ children }: ProfileWalletProviderProps) {
-  const setActiveWallet = useSetActiveWallet();
-  const activeWallet = useActiveWallet();
+  const setActiveWallet = useSetActiveSessionWallet();
+  const activeWallet = useActiveSessionWallet();
   const { disconnect } = useDisconnect();
   
   // Keep track of wallet instances per profile
@@ -61,7 +61,7 @@ const switchProfileWallet = async (profileId: string) => {
   // 2. Get or create wallet instance for the profile
   let profileWallet = profileWallets.current.get(profileId);
   if (!profileWallet) {
-    profileWallet = inAppWallet({
+    profileWallet = sessionWallet({
       storage: profileScopedStorage,
     });
     profileWallets.current.set(profileId, profileWallet);
@@ -75,7 +75,7 @@ const switchProfileWallet = async (profileId: string) => {
   
   // 4. CRITICAL: Set as active wallet
   await setActiveWallet(profileWallet);
-};
+}; 
 ```
 
 ### 4. Provider Hierarchy
@@ -85,13 +85,13 @@ Updated the app layout to include ProfileWalletProvider:
 ```typescript
 // app/_layout.tsx
 return (
-  <ThirdwebProvider>
+  <SessionWalletProvider>
     <ProfileWalletProvider>
       <AuthProvider>
         {/* ... */}
       </AuthProvider>
     </ProfileWalletProvider>
-  </ThirdwebProvider>
+  </SessionWalletProvider>
 );
 ```
 
@@ -114,4 +114,4 @@ return (
 - Complete isolation between profiles
 - Social accounts stay with their respective profiles
 - No cross-contamination of wallet data
-- Proper Thirdweb SDK integration
+- Proper session wallet integration

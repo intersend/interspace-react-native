@@ -40,7 +40,7 @@ Created `useAutoLinkSocial` hook that:
 export function useAutoLinkSocial() {
   const { isAuthenticated } = useAuth();
   const { activeProfile } = useProfiles();
-  const { linkSocialProfile, linkTelegramProfile } = useThirdwebProfiles();
+  const { linkSocialProfile, linkTelegramProfile } = useSocialProfiles();
   const hasChecked = useRef(false);
 
   useEffect(() => {

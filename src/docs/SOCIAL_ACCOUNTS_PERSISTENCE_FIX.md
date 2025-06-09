@@ -7,8 +7,8 @@ When the app is reloaded, linked social accounts (like Telegram) disappear from 
 ## Root Cause
 
 1. **Missing Wallet Reconnection**: On app startup, we authenticate the user but don't reconnect to the active profile's guest wallet
-2. **Thirdweb Context Loss**: Without the wallet connection, Thirdweb can't retrieve the linked social profiles
-3. **Display Logic**: The UI relies on Thirdweb's connected wallet to show social accounts
+2. **Wallet Context Loss**: Without the wallet connection, the app can't retrieve the linked social profiles
+3. **Display Logic**: The UI relies on the connected session wallet to show social accounts
 
 ## Solution Implemented
 
@@ -37,7 +37,7 @@ try {
 Created `ProfileWalletContext.tsx` to manage wallet instances:
 - Maintains wallet instances per profile
 - Properly disconnects/connects when switching
-- Uses `useSetActiveWallet()` for proper Thirdweb integration
+- Uses `useSetActiveSessionWallet()` for proper integration
 
 ### 3. Wallet Isolation Architecture
 
@@ -69,7 +69,7 @@ Each profile has its own guest wallet with isolated storage:
 1. **AuthContext**: Handles initial wallet reconnection
 2. **ProfileWalletContext**: Manages wallet instances
 3. **useProfiles**: Uses ProfileWalletContext for switching
-4. **useThirdwebProfiles**: Reads social accounts from active wallet
+4. **useSocialProfiles**: Reads social accounts from active wallet
 
 ## Architecture Flow
 
@@ -85,7 +85,7 @@ App Start
 │
 └── Profile Display
     ├── useProfiles() - Gets profile data
-    └── useThirdwebProfiles() - Gets social accounts from wallet
+    └── useSocialProfiles() - Gets social accounts from wallet
 ```
 
 ## Telegram Login Support
@@ -98,6 +98,6 @@ Added Telegram as a login option in `CleanAuthScreen.tsx`:
 ## Important Notes
 
 1. **Storage Isolation**: Each profile's wallet uses unique storage keys
-2. **No Backend Storage**: Social profiles are stored in Thirdweb, not backend
+2. **No Backend Storage**: Social profiles are stored in the session wallet provider, not backend
 3. **Wallet Connection Required**: Social accounts only visible when wallet connected
 4. **Profile Switching**: Properly disconnects old wallet before connecting new one

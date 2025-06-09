@@ -17,7 +17,7 @@ The backend team has implemented the following logic in `DELETE /accounts/:accou
 
 ### Current State
 
-The frontend properly calls the backend unlinking endpoint, which handles the complete removal. However, we also need to consider Thirdweb SDK profile unlinking for future consistency.
+The frontend properly calls the backend unlinking endpoint, which handles the complete removal.
 
 ### What's Working
 
@@ -25,14 +25,6 @@ The frontend properly calls the backend unlinking endpoint, which handles the co
 2. **Local State Update**: The frontend properly updates local state to remove the account ✅
 3. **New User Flow**: When the removed EOA signs in again, it's treated as a new user ✅
 
-### Thirdweb SDK Consideration
-
-Currently, when users authenticate with EOAs via SIWE, we don't create Thirdweb profiles for the EOAs. The Thirdweb profiles are only created for:
-- Social accounts (Google, Discord, etc.)
-- Email/Phone authentication
-- Guest wallets
-
-Since EOAs don't have Thirdweb profiles, there's nothing to unlink from Thirdweb when they're removed.
 
 ## Testing Checklist
 
@@ -43,6 +35,5 @@ Since EOAs don't have Thirdweb profiles, there's nothing to unlink from Thirdweb
 
 ## Future Enhancements
 
-1. If we ever create Thirdweb profiles for EOAs, we'll need to implement proper unlinking
-2. Consider adding a "Remove from all profiles" option for power users
-3. Add audit logging for account removals
+1. Consider adding a "Remove from all profiles" option for power users
+2. Add audit logging for account removals
