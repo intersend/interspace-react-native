@@ -8,13 +8,18 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { useWalletImage, useWalletInfo } from 'thirdweb/react';
 import { Colors } from '../../../constants/Colors';
 import { useColorScheme } from '../../../hooks/useColorScheme';
 import { SmartProfile, LinkedAccount } from '../../types';
 import { SwipeableAccountRow } from './SwipeableAccountRow';
 import { apiService } from '../../services/api';
 import { useLinkedAccounts } from '../../hooks/useLinkedAccounts';
+
+const WALLET_ICONS: Record<string, { icon: string; name: string }> = {
+  metamask: { icon: '🦊', name: 'MetaMask' },
+  coinbase: { icon: '🪙', name: 'Coinbase' },
+  walletconnect: { icon: '🔗', name: 'WalletConnect' },
+};
 interface AppleWalletCardProps {
   profile: SmartProfile;
   linkedAccounts: LinkedAccount[];
@@ -37,7 +42,6 @@ const AccountRow: React.FC<AccountRowProps> = ({
   isPrimary = false 
 }) => {
   const colorScheme = useColorScheme();
-  const { data: walletImage } = useWalletImage(account.walletType || 'unknown');
   
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -49,7 +53,7 @@ const AccountRow: React.FC<AccountRowProps> = ({
     }
     
     if (isLinkedAccount) {
-      return walletImage || '👛';
+      return WALLET_ICONS[account.walletType]?.icon || '👛';
     } else {
       // Thirdweb social profile
       switch (account.type) {
@@ -70,7 +74,12 @@ const AccountRow: React.FC<AccountRowProps> = ({
     }
     
     if (isLinkedAccount) {
-      return account.customName || 'External Wallet';
+      return (
+        account.customName ||
+        WALLET_ICONS[account.walletType]?.name ||
+        account.walletType ||
+        'External Wallet'
+      );
     } else {
       return account.details?.email || account.details?.phone || account.type;
     }
