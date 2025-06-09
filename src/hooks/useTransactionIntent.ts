@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useProfiles } from './useProfiles';
 import { useActiveAccount } from 'thirdweb/react';
+import { useSessionWallet } from '../contexts/SessionWalletContext';
 import { orbyService } from '../services/orby';
 import {
   TransactionIntent,
@@ -42,6 +43,7 @@ interface UseTransactionIntentReturn {
 export function useTransactionIntent(): UseTransactionIntentReturn {
   const { activeProfile } = useProfiles();
   const activeAccount = useActiveAccount();
+  const { signWithSessionWallet } = useSessionWallet();
   
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
@@ -119,15 +121,8 @@ export function useTransactionIntent(): UseTransactionIntentReturn {
         const signedOperations: SignedOperation[] = [];
 
         for (const operation of intent.unsignedOperations.operations) {
-          // Use the active account (session wallet) to sign
-          // For now, we'll create a mock signature until we properly integrate with session wallet
-          // TODO: Integrate with actual session wallet signing
-          const mockSignature = `0x${'00'.repeat(65)}`; // Placeholder signature
-          
-          signedOperations.push({
-            index: operation.index,
-            signature: mockSignature,
-          });
+          const signature = await signWithSessionWallet(operation.data);
+          signedOperations.push({ index: operation.index, signature });
         }
 
         setIsSigning(false);

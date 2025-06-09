@@ -9,7 +9,10 @@ import {
   RefreshControl,
   Dimensions,
   Pressable,
+  Alert,
+  Linking,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,8 +28,9 @@ import { useTransactionIntent } from '@/src/hooks/useTransactionIntent';
 import { useLinkedAccounts } from '@/src/hooks/useLinkedAccounts';
 import { useProfiles } from '@/src/hooks/useProfiles';
 import { UnifiedToken } from '@/src/types/orby';
-import { LinkedAccount } from '@/src/types';
+import { LinkedAccount, Transaction } from '@/src/types';
 import { hapticTrigger } from '@/src/utils/hapticFeedback';
+import { useTransactions } from '@/src/hooks/useTransactions';
 
 // Constants
 import { IOSColors, IOSTypography, IOSLayout } from '@/src/constants/IOSColors';
@@ -56,6 +60,7 @@ export default function WalletScreen() {
     reset: resetIntent 
   } = useTransactionIntent();
   const linkedAccountsHook = useLinkedAccounts(activeProfile?.id);
+  const { transactions, refresh: refreshTransactions } = useTransactions();
 
   // Get linked accounts and primary account
   const linkedAccounts = linkedAccountsHook.accounts || [];
@@ -72,6 +77,7 @@ export default function WalletScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     refresh();
+    refreshTransactions();
     setTimeout(() => setRefreshing(false), 1000);
   };
 
@@ -85,8 +91,10 @@ export default function WalletScreen() {
   };
 
   const handleReceive = () => {
-    // TODO: Implement receive functionality
-    hapticTrigger('impactLight');
+    if (!selectedAccount) return;
+    Clipboard.setStringAsync(selectedAccount.address);
+    hapticTrigger('notificationSuccess');
+    Alert.alert('Address Copied', selectedAccount.address);
   };
 
   const handleSwap = () => {
@@ -98,7 +106,8 @@ export default function WalletScreen() {
   };
 
   const handleBuy = () => {
-    // TODO: Implement buy functionality
+    const url = 'https://ramp.network/buy';
+    Linking.openURL(url);
     hapticTrigger('impactLight');
   };
 
@@ -264,37 +273,46 @@ export default function WalletScreen() {
     );
   };
 
-  const ActivityItem = ({ type, description, amount, time, app }: any) => (
-    <Pressable 
-      style={({ pressed }) => [
-        styles.activityItem,
-        pressed && styles.activityItemPressed
-      ]}
-    >
-      <View style={styles.activityLeft}>
-        <View style={[styles.activityIcon, { backgroundColor: getActivityColor(type) }]}>
-          <Ionicons 
-            name={getActivityIcon(type) as any} 
-            size={20} 
-            color="#FFFFFF" 
-          />
+  const ActivityItem = ({ tx }: { tx: Transaction }) => {
+    const isSend = selectedAccount && tx.fromAddress.toLowerCase() === selectedAccount.address.toLowerCase();
+    const type = isSend ? 'send' : 'receive';
+    const description = isSend ? `To ${tx.toAddress.slice(0, 6)}...` : `From ${tx.fromAddress.slice(0, 6)}...`;
+    const amount = `${(Number(tx.value) / 1e18).toFixed(4)} ETH`;
+    const time = new Date(tx.blockTimestamp || tx.createdAt).toLocaleDateString();
+    const app = tx.targetApp || '';
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.activityItem,
+          pressed && styles.activityItemPressed
+        ]}
+      >
+        <View style={styles.activityLeft}>
+          <View style={[styles.activityIcon, { backgroundColor: getActivityColor(type) }]}>
+            <Ionicons
+              name={getActivityIcon(type) as any}
+              size={20}
+              color="#FFFFFF"
+            />
+          </View>
+          <View style={styles.activityInfo}>
+            <Text style={styles.activityDescription}>{description}</Text>
+            <Text style={styles.activityTime}>{time}{app ? ` • ${app}` : ''}</Text>
+          </View>
         </View>
-        <View style={styles.activityInfo}>
-          <Text style={styles.activityDescription}>{description}</Text>
-          <Text style={styles.activityTime}>{time} • {app}</Text>
+
+        <View style={styles.activityRight}>
+          <Text style={[
+            styles.activityAmount,
+            { color: isSend ? IOSColors.label : IOSColors.systemGreen }
+          ]}>
+            {isSend ? '-' : '+'}{amount}
+          </Text>
         </View>
-      </View>
-      
-      <View style={styles.activityRight}>
-        <Text style={[
-          styles.activityAmount,
-          { color: type === 'receive' ? IOSColors.systemGreen : IOSColors.label }
-        ]}>
-          {type === 'receive' ? '+' : '-'}{amount}
-        </Text>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -316,13 +334,6 @@ export default function WalletScreen() {
     }
   };
 
-  // Mock activity data
-  const mockActivity = [
-    { type: 'app', description: 'Uniswap Transaction', amount: '0.1 ETH', time: '2h ago', app: 'Uniswap' },
-    { type: 'receive', description: 'Received USDC', amount: '500 USDC', time: '5h ago', app: 'Transfer' },
-    { type: 'send', description: 'Sent ETH', amount: '0.05 ETH', time: '1d ago', app: 'Transfer' },
-    { type: 'swap', description: 'Swapped ETH for USDC', amount: '0.2 ETH', time: '2d ago', app: 'Uniswap' },
-  ];
 
   return (
     <View style={styles.container}>
@@ -398,11 +409,11 @@ export default function WalletScreen() {
 
           {activeTab === 'activity' && (
             <View style={styles.contentSection}>
-              {mockActivity.map((activity, index) => (
-                <ActivityItem key={index} {...activity} />
+              {transactions.map(tx => (
+                <ActivityItem key={tx.id} tx={tx} />
               ))}
-              
-              {mockActivity.length === 0 && (
+
+              {transactions.length === 0 && (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyIcon}>⏱</Text>
                   <Text style={styles.emptyText}>No activity yet</Text>

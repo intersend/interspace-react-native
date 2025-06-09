@@ -14,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 import { useColorScheme } from '../../../hooks/useColorScheme';
@@ -22,6 +23,7 @@ import { ThemedView } from '../../../components/ThemedView';
 import { ThemedText } from '../../../components/ThemedText';
 import { apiService } from '../../services/api';
 import { User, SocialAccount } from '../../types';
+import * as WebBrowser from 'expo-web-browser';
 import { useUserSocialAccounts } from '../../hooks/useUserSocialAccounts';
 
 interface AccountSettingsScreenProps {
@@ -110,14 +112,36 @@ const AccountSettingsScreen: React.FC<AccountSettingsScreenProps> = ({ visible, 
   };
 
   const handleAddAccount = () => {
-    Alert.alert(
-      'Coming Soon',
-      'Social account linking through the backend is currently in development. Please use the authentication screen to link new accounts.',
-      [{ text: 'OK' }]
-    );
-    
-    // TODO: Implement OAuth flow with backend when ready
-    // The backend expects oauthCode which requires implementing OAuth flow
+    const options = ['Cancel', 'Google', 'Discord', 'Telegram'];
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: 0,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex === 0) return;
+          const provider = options[buttonIndex].toLowerCase();
+          try {
+            const redirectUri = Linking.createURL('oauth');
+            const { authUrl } = await apiService.getLinkAuthUrl(provider, redirectUri);
+            const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+            if (result.type === 'success' && result.url) {
+              const url = new URL(result.url);
+              const code = url.searchParams.get('code');
+              if (code) {
+                await linkAccount(provider, code, redirectUri);
+                Alert.alert('Success', 'Account linked successfully');
+                refresh();
+              }
+            }
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to link account');
+          }
+        }
+      );
+    }
   };
 
   const handleRemoveAccount = (account: SocialAccount) => {

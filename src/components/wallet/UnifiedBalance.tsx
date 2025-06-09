@@ -71,7 +71,26 @@ export default function UnifiedBalance({
   }
 
   const totalUsd = balance ? formatUsdValue(balance.totalUsdValue) : '$0.00';
-  const change24h = 2.34; // TODO: Calculate actual 24h change from balance data
+
+  const change24h = React.useMemo(() => {
+    if (!balance) return 0;
+    const total = parseFloat(balance.totalUsdValue);
+    if (!total) return 0;
+    const weighted = balance.tokens.reduce((sum, t) => {
+      const tokenUsd = parseFloat(t.totalUsdValue);
+      const pct = parseFloat((t as any).change24h || '0');
+      return sum + tokenUsd * pct;
+    }, 0);
+    return weighted / total;
+  }, [balance]);
+
+  const distribution = React.useMemo(() => {
+    if (!balance || balance.tokens.length === 0) return 0;
+    const total = parseFloat(balance.totalUsdValue);
+    if (!total) return 0;
+    const largest = Math.max(...balance.tokens.map(t => parseFloat(t.totalUsdValue)));
+    return (largest / total) * 100;
+  }, [balance]);
 
   return (
     <View style={styles.container}>
@@ -84,7 +103,7 @@ export default function UnifiedBalance({
           colors={['#0A84FF', '#5E5CE6', '#BF5AF2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={styles.portfolioBarFill}
+          style={[styles.portfolioBarFill, { width: `${distribution}%` }]}
         />
       </View>
       
@@ -181,7 +200,7 @@ const styles = StyleSheet.create({
   },
   portfolioBarFill: {
     height: '100%',
-    width: '70%', // TODO: Calculate based on actual portfolio distribution
+    width: '100%',
     borderRadius: 4,
   },
   statsContainer: {
