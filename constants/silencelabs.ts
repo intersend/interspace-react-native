@@ -1,6 +1,6 @@
 import { createDuoSDK } from "@silencelaboratories/react-native-duo-sdk";
 import {
-  ethereum,
+  mainnet as ethereum,
   polygon,
   arbitrum,
   optimism,
@@ -10,7 +10,7 @@ import {
   arbitrumSepolia,
   optimismSepolia,
   baseSepolia,
-} from "thirdweb/chains";
+} from "viem/chains";
 
 const baseUrl = process.env.EXPO_PUBLIC_SILENCELABS_NODE_URL || "https://api.silencelabs.org";
 
