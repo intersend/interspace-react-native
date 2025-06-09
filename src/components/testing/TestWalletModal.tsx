@@ -16,6 +16,10 @@ import { TestWallet } from '../../types';
 import ApplePayTray from '../transaction/ApplePayTray';
 import { getRandomTransactionScenario } from '../../utils/mockOrbyData';
 
+// This modal is only presented from development-only components such as
+// `FloatingTestWallet`. Production builds never import it because `__DEV__`
+// disables the entire test wallet system.
+
 interface TestWalletModalProps {
   visible: boolean;
   onClose: () => void;

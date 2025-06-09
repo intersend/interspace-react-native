@@ -48,7 +48,9 @@ export function useTestWallet() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Check if we're in development mode
+  // Check if we're in development mode. `__DEV__` is a React Native global
+  // that is only true in dev builds. We rely on it to disable all test wallet
+  // functionality in production.
   const isDevelopment = __DEV__ && process.env.NODE_ENV === 'development';
 
   // Create wallet instance for external authentication
