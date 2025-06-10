@@ -19,6 +19,7 @@ export default function AppleAppFlow({ children }: AppleAppFlowProps) {
   const [appState, setAppState] = useState<AppState>('loading');
   const [authPath, setAuthPath] = useState<OnboardingPath>('guest');
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
   
   // Clean authentication system
   const { isAuthenticated, isLoading: authLoading, user, login, logout } = useAuth();
@@ -56,13 +57,31 @@ export default function AppleAppFlow({ children }: AppleAppFlowProps) {
           console.log('🔄 Setting appState from', appState, 'to authenticated');
           setAppState('authenticated');
         } else {
-          console.log('🔓 Not authenticated - transitioning to auth screen');
-          console.log('🔄 Setting appState from', appState, 'to authentication');
-          // Reset authPath to 'choice' when transitioning from authenticated state
-          if (appState === 'authenticated') {
-            setAuthPath('choice' as OnboardingPath);
+          const shouldAutoLogin =
+            process.env.EXPO_PUBLIC_AUTO_LOGIN_GUEST === 'true' &&
+            !autoLoginAttempted;
+
+          if (shouldAutoLogin) {
+            console.log('🤖 Auto guest login enabled, attempting login...');
+            setAutoLoginAttempted(true);
+            login({ strategy: 'guest' })
+              .then(() => {
+                console.log('✅ Auto guest login successful');
+                setAppState('authenticated');
+              })
+              .catch(err => {
+                console.error('❌ Auto guest login failed:', err);
+                setAppState('authentication');
+              });
+          } else {
+            console.log('🔓 Not authenticated - transitioning to auth screen');
+            console.log('🔄 Setting appState from', appState, 'to authentication');
+            // Reset authPath to 'choice' when transitioning from authenticated state
+            if (appState === 'authenticated') {
+              setAuthPath('choice' as OnboardingPath);
+            }
+            setAppState('authentication');
           }
-          setAppState('authentication');
         }
       } else {
         console.log('⏸️ Skipping auth state change - in', appState, 'mode');
@@ -70,7 +89,7 @@ export default function AppleAppFlow({ children }: AppleAppFlowProps) {
     } else {
       console.log('⏳ Auth still loading, waiting...');
     }
-  }, [isAuthenticated, authLoading, user, appState, updateTrigger]);
+  }, [isAuthenticated, authLoading, user, appState, updateTrigger, autoLoginAttempted]);
 
   // Additional effect to force transition after authentication
   useEffect(() => {
