@@ -20,7 +20,9 @@ export default function CleanAppFlow({ children }: CleanAppFlowProps) {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   
   // Clean authentication system
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, login } = useAuth();
+
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
   // Initialize app state - check onboarding status only
   useEffect(() => {
@@ -52,10 +54,28 @@ export default function CleanAppFlow({ children }: CleanAppFlowProps) {
       console.log('✅ User authenticated, showing main app');
       setAppState('authenticated');
     } else {
-      console.log('🔓 User not authenticated, showing auth screen');
-      setAppState('authentication');
+      const shouldAutoLogin =
+        process.env.EXPO_PUBLIC_AUTO_LOGIN_GUEST === 'true' &&
+        !autoLoginAttempted;
+
+      if (shouldAutoLogin) {
+        console.log('🤖 Auto guest login enabled, attempting login...');
+        setAutoLoginAttempted(true);
+        login({ strategy: 'guest' })
+          .then(() => {
+            console.log('✅ Auto guest login successful');
+            setAppState('authenticated');
+          })
+          .catch(err => {
+            console.error('❌ Auto guest login failed:', err);
+            setAppState('authentication');
+          });
+      } else {
+        console.log('🔓 User not authenticated, showing auth screen');
+        setAppState('authentication');
+      }
     }
-  }, [isAuthenticated, authLoading, user, appState]);
+  }, [isAuthenticated, authLoading, user, appState, autoLoginAttempted]);
 
   const checkOnboardingStatus = async () => {
     try {
