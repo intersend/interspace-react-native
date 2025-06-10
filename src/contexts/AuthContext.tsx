@@ -92,8 +92,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const validateSession = async (session: AuthSession): Promise<boolean> => {
     try {
-      await Keychain.setGenericPassword('token', session.accessToken, { service: 'interspace_access_token' });
-      await Keychain.setGenericPassword('refresh', session.refreshToken, { service: 'interspace_refresh_token' });
+      await Keychain.setGenericPassword('token', session.accessToken, {
+        service: 'interspace_access_token',
+      });
+      await Keychain.setGenericPassword('refresh', session.refreshToken, {
+        service: 'interspace_refresh_token',
+      });
+
+      if (session.user.isGuest) {
+        return true;
+      }
+
       const refreshed = await apiService.refreshToken();
       if (refreshed) return true;
       await apiService.getProfiles();
@@ -120,6 +129,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       let providerToken = '';
       let walletAddress: string | undefined;
+
+      if (config.strategy === 'guest') {
+        const device = await getDeviceInfo();
+        const userData: User = {
+          id: `guest-${Date.now()}`,
+          isGuest: true,
+          authStrategies: ['guest'],
+          email: undefined,
+          walletAddress: undefined,
+          profilesCount: 0,
+          linkedAccountsCount: 0,
+          activeDevicesCount: 1,
+          socialAccounts: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const session: AuthSession = {
+          user: userData,
+          accessToken: 'guest-access-token',
+          refreshToken: 'guest-refresh-token',
+          expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+          deviceId: device.deviceId,
+          createdAt: new Date().toISOString(),
+        };
+
+        await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+        await Keychain.setGenericPassword('token', session.accessToken, {
+          service: 'interspace_access_token',
+        });
+        await Keychain.setGenericPassword('refresh', session.refreshToken, {
+          service: 'interspace_refresh_token',
+        });
+        apiService.setAccessToken(session.accessToken);
+
+        setUser(userData);
+        setAuthState('authenticated');
+        onSuccess?.();
+        return;
+      }
 
       if (config.strategy === 'google') {
         const result = await Google.logInAsync({
