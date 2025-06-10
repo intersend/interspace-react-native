@@ -1,9 +1,43 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import {
-  useECDSAKeyGen,
-  useGenECDSASign,
-  useECDSAKeyRefresh,
-} from '@silencelaboratories/react-native-duo-sdk';
+
+const disableSilenceLabs =
+  process.env.EXPO_PUBLIC_DISABLE_SILENCELABS === 'true';
+
+type AsyncFn = (...args: any[]) => Promise<any>;
+
+interface ECDSAKeyGenHookReturn {
+  generateKey: AsyncFn;
+  keyPair?: { address?: string };
+}
+
+type ECDSAKeyGenHook = () => ECDSAKeyGenHookReturn;
+
+interface GenECDSASignHookReturn {
+  sign: AsyncFn;
+}
+
+type GenECDSASignHook = () => GenECDSASignHookReturn;
+
+interface ECDSAKeyRefreshHookReturn {
+  refreshKey: AsyncFn;
+}
+
+type ECDSAKeyRefreshHook = () => ECDSAKeyRefreshHookReturn;
+
+let useECDSAKeyGen: ECDSAKeyGenHook;
+let useGenECDSASign: GenECDSASignHook;
+let useECDSAKeyRefresh: ECDSAKeyRefreshHook;
+
+if (!disableSilenceLabs) {
+  const sdk = require('@silencelaboratories/react-native-duo-sdk');
+  useECDSAKeyGen = sdk.useECDSAKeyGen;
+  useGenECDSASign = sdk.useGenECDSASign;
+  useECDSAKeyRefresh = sdk.useECDSAKeyRefresh;
+} else {
+  useECDSAKeyGen = () => ({ generateKey: async () => {}, keyPair: undefined });
+  useGenECDSASign = () => ({ sign: async () => '' });
+  useECDSAKeyRefresh = () => ({ refreshKey: async () => {} });
+}
 
 interface SessionWalletContextValue {
   generateDeviceShare: ReturnType<typeof useECDSAKeyGen>['generateKey'];
