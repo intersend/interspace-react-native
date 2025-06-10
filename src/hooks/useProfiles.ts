@@ -6,6 +6,11 @@ import {
   useRotateKey,
 } from '../contexts/SessionWalletContext';
 
+const disableSilenceLabs =
+  process.env.EXPO_PUBLIC_DISABLE_SILENCELABS === 'true';
+const disableWalletApis =
+  process.env.EXPO_PUBLIC_DISABLE_WALLET_APIS === 'true';
+
 export function useProfiles(): UseProfilesReturn {
   const [profiles, setProfiles] = useState<SmartProfile[]>([]);
   const [activeProfile, setActiveProfile] = useState<SmartProfile | null>(null);
@@ -123,18 +128,22 @@ export function useProfiles(): UseProfilesReturn {
       console.log('✅ Backend profile created:', newProfile.id);
       
       // Step 3: Generate a session wallet key share with Silence Labs
-      try {
-        const { token } = await apiService.getSessionWalletToken(newProfile.id);
-        const keyShare = await generateDeviceShare(token);
-        const { address } = await apiService.finalizeSessionWallet(
-          newProfile.id,
-          keyShare
-        );
-        newProfile.sessionWalletAddress = address;
-        console.log('✅ Session wallet generated:', address);
-      } catch (walletError: any) {
-        console.error('⚠️ Failed to generate session wallet:', walletError);
-        // Continue without wallet - user can still link external wallets
+      if (!disableSilenceLabs && !disableWalletApis) {
+        try {
+          const { token } = await apiService.getSessionWalletToken(newProfile.id);
+          const keyShare = await generateDeviceShare(token);
+          const { address } = await apiService.finalizeSessionWallet(
+            newProfile.id,
+            keyShare
+          );
+          newProfile.sessionWalletAddress = address;
+          console.log('✅ Session wallet generated:', address);
+        } catch (walletError: any) {
+          console.error('⚠️ Failed to generate session wallet:', walletError);
+          // Continue without wallet - user can still link external wallets
+        }
+      } else {
+        console.log('🚫 Wallet APIs disabled, skipping session wallet setup');
       }
       
       // Step 4: Add to local state
@@ -222,12 +231,16 @@ export function useProfiles(): UseProfilesReturn {
       }
       
       // Refresh session wallet key
-      try {
-        await rotateKey();
-        console.log('✅ Session wallet refreshed');
-      } catch (walletError) {
-        console.error('⚠️ Failed to refresh session wallet:', walletError);
-        // Continue - profile is switched in backend even if refresh fails
+      if (!disableSilenceLabs && !disableWalletApis) {
+        try {
+          await rotateKey();
+          console.log('✅ Session wallet refreshed');
+        } catch (walletError) {
+          console.error('⚠️ Failed to refresh session wallet:', walletError);
+          // Continue - profile is switched in backend even if refresh fails
+        }
+      } else {
+        console.log('🚫 Wallet APIs disabled, skipping session wallet refresh');
       }
       
       console.log('✅ Switched to profile:', newActiveProfile?.name);
