@@ -211,7 +211,6 @@ export const UniversalAddTray: React.FC<UniversalAddTrayProps> = ({
             <View style={{ height: 40 }} />
           </ScrollView>
         </View>
-      </View>
     </AppleBottomTray>
   );
 };
