@@ -17,6 +17,7 @@ import {
 } from '../types';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1';
+const disableWalletApis = process.env.EXPO_PUBLIC_DISABLE_WALLET_APIS === 'true';
 
 class ApiService {
   private baseURL: string;
@@ -487,6 +488,10 @@ class ApiService {
 
   // Session Wallet Management
   async getSessionWalletToken(profileId: string): Promise<{ token: string }> {
+    if (disableWalletApis) {
+      console.log('🚫 Wallet APIs disabled, returning dummy token');
+      return { token: 'dummy-token' };
+    }
     const response = await this.requestWithRefresh<{ token: string }>(
       `/profiles/${profileId}/session-wallet/token`
     );
@@ -497,6 +502,10 @@ class ApiService {
     profileId: string,
     keyShare: string
   ): Promise<{ address: string }> {
+    if (disableWalletApis) {
+      console.log('🚫 Wallet APIs disabled, returning dummy address');
+      return { address: '0x0000000000000000000000000000000000000000' };
+    }
     const response = await this.requestWithRefresh<{ address: string }>(
       `/profiles/${profileId}/session-wallet`,
       {
