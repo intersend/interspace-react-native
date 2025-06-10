@@ -88,6 +88,9 @@ Edit `.env` and configure endpoints:
 ```
 EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
 EXPO_PUBLIC_SILENCELABS_NODE_URL=https://api.silencelabs.org
+EXPO_PUBLIC_DISABLE_SILENCELABS=false
+EXPO_PUBLIC_DISABLE_WALLET_APIS=false
+EXPO_PUBLIC_AUTO_LOGIN_GUEST=false
 ```
 6. Prebuild native directories:
 ```bash
