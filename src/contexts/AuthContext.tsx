@@ -50,7 +50,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    GoogleOneTapSignIn.configure({ webClientId: 'autoDetect' });
+    const webClientId =
+      process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'autoDetect';
+    GoogleOneTapSignIn.configure({ webClientId });
   }, []);
 
   useEffect(() => {
