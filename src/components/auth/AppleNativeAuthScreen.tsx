@@ -19,6 +19,8 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppleContactAuthModal from './AppleContactAuthModal';
 import AppleBottomTray from '../ui/AppleBottomTray';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { AppleAuthenticationButton } from 'expo-apple-authentication';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,6 +33,7 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -63,6 +66,10 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
         }),
       ]),
     ]).start();
+  }, []);
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
   }, []);
 
   const PASSKEY_KEY = 'interspace_has_passkey';
@@ -175,18 +182,15 @@ export default function AppleNativeAuthScreen({ onAuthSuccess }: AppleNativeAuth
         </View>
 
         {/* Sign in with Apple - Secondary Option */}
-        <AppleAuthButton
-          onPress={handleSignInWithApple}
-          variant="tertiary"
-        >
-          <View style={styles.buttonContent}>
-            <Image 
-              source={require('../../../assets/images/apple.png')}
-              style={[styles.appleIcon, { tintColor: Apple.Colors.systemBlue }]}
-            />
-            <Text style={styles.tertiaryButtonText}>Sign in with Apple</Text>
-          </View>
-        </AppleAuthButton>
+        {appleAuthAvailable && (
+          <AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={Apple.Radius.standard}
+            style={styles.appleSignInButton}
+            onPress={handleSignInWithApple}
+          />
+        )}
 
         {/* More Options */}
         <TouchableOpacity 
@@ -435,6 +439,11 @@ const styles = StyleSheet.create({
     borderRadius: Apple.Radius.standard,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: Apple.Spacing.medium,
+  },
+  appleSignInButton: {
+    width: '100%',
+    height: 50,
     marginBottom: Apple.Spacing.medium,
   },
   appleButton: {
