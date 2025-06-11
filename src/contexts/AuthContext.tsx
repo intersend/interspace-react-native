@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Google from 'expo-auth-session/providers/google';
+import {
+  GoogleOneTapSignIn,
+  isSuccessResponse,
+  isNoSavedCredentialFoundResponse,
+} from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Keychain from 'react-native-keychain';
 import * as Passkey from 'react-native-passkey';
@@ -43,6 +47,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     apiService.setAuthExpiredHandler(() => logout());
+  }, []);
+
+  useEffect(() => {
+    GoogleOneTapSignIn.configure({ webClientId: 'autoDetect' });
   }, []);
 
   useEffect(() => {
@@ -171,12 +179,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (config.strategy === 'google') {
-        const result = await Google.logInAsync({
-          clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '',
-          scopes: ['profile', 'email'],
-        });
-        if (result.type !== 'success') throw new Error('Google login cancelled');
-        providerToken = result.idToken || '';
+        await GoogleOneTapSignIn.checkPlayServices();
+        const result = await GoogleOneTapSignIn.signIn();
+        if (isNoSavedCredentialFoundResponse(result)) {
+          const explicit = await GoogleOneTapSignIn.presentExplicitSignIn();
+          if (!isSuccessResponse(explicit)) throw new Error('Google login cancelled');
+          providerToken = explicit.data.idToken ?? '';
+        } else if (isSuccessResponse(result)) {
+          providerToken = result.data.idToken ?? '';
+        } else {
+          throw new Error('Google login failed');
+        }
       } else if (config.strategy === 'apple') {
         const res = await AppleAuthentication.signInAsync({
           requestedScopes: [AppleAuthentication.AppleAuthenticationScope.EMAIL],
