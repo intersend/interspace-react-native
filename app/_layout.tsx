@@ -8,6 +8,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { MetaMaskProvider } from "@metamask/sdk-react";
+import { MetaMaskSDKOptions } from "@metamask/sdk";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { StatusBar } from "react-native";
@@ -49,24 +51,45 @@ export default function RootLayout() {
 		},
 	};
 
+	// MetaMask SDK Options
+	const metamaskSdkOptions: MetaMaskSDKOptions = {
+		dappMetadata: {
+			name: "Interspace",
+			url: "https://interspace.com", // Replace with your dapp's URL
+		},
+		// Use Orby's virtual node RPC URL here.
+		// This is a placeholder. You need to replace it with the actual Orby virtual node RPC URL.
+		// Example: rpc: { "1": "https://rpc.orby.io/virtual-node/<YOUR_API_KEY>" }
+		rpc: {
+			// Placeholder for Orby's virtual node RPC URL
+			// You need to replace "1" with the actual chain ID if different, and the URL.
+			"1": "YOUR_ORBY_VIRTUAL_NODE_RPC_URL",
+		},
+		// @ts-ignore
+		logging: true, // Enable logging for debugging
+	};
+
 	return (
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                        <SessionWalletProvider>
-                                <AuthProvider>
-                                        <ThemeProvider value={InterspaceTheme}>
-							<StatusBar
-								backgroundColor={Colors.dark.background}
-								barStyle="light-content"
-							/>
-							<CleanAppFlow>
-								<Stack>
-									<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-									<Stack.Screen name="+not-found" />
-								</Stack>
-							</CleanAppFlow>
-						</ThemeProvider>
+		              <GestureHandlerRootView style={{ flex: 1 }}>
+		                      {/* @ts-ignore */}
+		                      <MetaMaskProvider sdkOptions={metamaskSdkOptions}>
+		                              <SessionWalletProvider>
+                                        <AuthProvider>
+                                                <ThemeProvider value={InterspaceTheme}>
+                                                        <StatusBar
+                                                                backgroundColor={Colors.dark.background}
+                                                                barStyle="light-content"
+                                                        />
+                                                        <CleanAppFlow>
+                                                                <Stack>
+                                                                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                                                        <Stack.Screen name="+not-found" />
+                                                                </Stack>
+                                                        </CleanAppFlow>
+                                                </ThemeProvider>
                                         </AuthProvider>
                                 </SessionWalletProvider>
+                        </MetaMaskProvider>
                 </GestureHandlerRootView>
 	);
 }

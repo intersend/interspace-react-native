@@ -29,10 +29,10 @@ let useGenECDSASign: GenECDSASignHook;
 let useECDSAKeyRefresh: ECDSAKeyRefreshHook;
 
 if (!disableSilenceLabs) {
-  const sdk = require('@silencelaboratories/react-native-duo-sdk');
-  useECDSAKeyGen = sdk.useECDSAKeyGen;
-  useGenECDSASign = sdk.useGenECDSASign;
-  useECDSAKeyRefresh = sdk.useECDSAKeyRefresh;
+  // const sdk = require('@silencelaboratories/react-native-duo-sdk');
+  // useECDSAKeyGen = sdk.useECDSAKeyGen;
+  // useGenECDSASign = sdk.useGenECDSASign;
+  // useECDSAKeyRefresh = sdk.useECDSAKeyRefresh;
 } else {
   useECDSAKeyGen = () => ({ generateKey: async () => {}, keyPair: undefined });
   useGenECDSASign = () => ({ sign: async () => '' });

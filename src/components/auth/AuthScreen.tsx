@@ -17,6 +17,7 @@ import { WalletConnectConfig } from '../../types';
 import EmailAuth from './EmailAuth';
 import SocialAuth from './SocialAuth';
 import ExternalWalletAuth from './ExternalWalletAuth';
+import AuthMethodButton from './AuthMethodButton'; // Import the new reusable component
 import { useTestWallet } from '../../hooks/useTestWallet';
 import { testWalletDemo } from '../testing/TestWalletSystem';
 import FloatingTestWallet from '../testing/FloatingTestWallet';
@@ -234,52 +235,6 @@ export default function AuthScreen({ onAuthSuccess, allowGuest = true }: AuthScr
   );
 }
 
-interface AuthMethodButtonProps {
-  title: string;
-  icon: string;
-  description: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'dev';
-}
-
-function AuthMethodButton({ 
-  title, 
-  icon, 
-  description, 
-  onPress, 
-  variant = 'primary' 
-}: AuthMethodButtonProps) {
-  return (
-    <View 
-      style={[
-        styles.methodButton, 
-        variant === 'secondary' && styles.methodButtonSecondary,
-        variant === 'dev' && styles.methodButtonDev
-      ]}
-      onTouchEnd={onPress}
-    >
-      <View style={styles.methodButtonContent}>
-        <Text style={styles.methodIcon}>{icon}</Text>
-        <View style={styles.methodTextContainer}>
-          <Text style={[
-            styles.methodTitle,
-            variant === 'secondary' && styles.methodTitleSecondary,
-            variant === 'dev' && styles.methodTitleDev
-          ]}>
-            {title}
-          </Text>
-          <Text style={[
-            styles.methodDescription,
-            variant === 'secondary' && styles.methodDescriptionSecondary,
-            variant === 'dev' && styles.methodDescriptionDev
-          ]}>
-            {description}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -314,46 +269,6 @@ const styles = StyleSheet.create({
   methodsGrid: {
     width: '100%',
     gap: 16,
-  },
-  methodButton: {
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-  },
-  methodButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: Colors.dark.border,
-    borderStyle: 'dashed',
-  },
-  methodButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  methodIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  methodTextContainer: {
-    flex: 1,
-  },
-  methodTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.dark.text,
-    marginBottom: 4,
-  },
-  methodTitleSecondary: {
-    color: Colors.dark.subtext,
-  },
-  methodDescription: {
-    fontSize: 14,
-    color: Colors.dark.subtext,
-    lineHeight: 18,
-  },
-  methodDescriptionSecondary: {
-    color: Colors.dark.subtext,
   },
   guestSection: {
     marginTop: 32,
@@ -391,8 +306,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     color: Colors.dark.text,
-    marginBottom: 12,
     textAlign: 'center',
+    marginBottom: 12,
   },
   comingSoonText: {
     fontSize: 16,
