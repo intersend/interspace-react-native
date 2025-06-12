@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  GoogleOneTapSignIn,
+  GoogleSignin,
+  GoogleSigninButton,
+  statusCodes,
   isSuccessResponse,
   isNoSavedCredentialFoundResponse,
+  isErrorWithCode,
+  isCancelledResponse,
 } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Keychain from 'react-native-keychain';
@@ -50,9 +54,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const webClientId =
-      process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'autoDetect';
-    GoogleOneTapSignIn.configure({ webClientId });
+    // Configure Google Sign-In with comprehensive options
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '', // Required for idToken
+      scopes: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'], // Default scopes
+      offlineAccess: true, // For refresh tokens
+      hostedDomain: '', // No domain restriction
+      forceCodeForRefreshToken: false, // Android-specific
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // iOS-specific client ID
+      profileImageSize: 120, // Profile image size
+    });
   }, []);
 
   useEffect(() => {
@@ -77,6 +88,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthState('loading');
       const sessionData = await AsyncStorage.getItem(AUTH_SESSION_KEY);
       if (!sessionData) {
+        // Check if user has previously signed in with Google
+        if (GoogleSignin.hasPreviousSignIn()) {
+          try {
+            // Try to sign in silently
+            const response = await GoogleSignin.signInSilently();
+            if (response.type === 'success') {
+              // Successfully signed in silently
+              const { data } = response;
+              if (data.idToken) {
+                // Auto-login with Google
+                await login({ strategy: 'google', email: data.user.email });
+                return;
+              }
+            } else if (response.type === 'noSavedCredentialFound') {
+              // No saved credentials, user needs to sign in manually
+            }
+          } catch (error) {
+            // Silent sign-in failed, continue with normal flow
+          }
+        }
         setAuthState('unauthenticated');
         return;
       }
@@ -181,16 +212,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (config.strategy === 'google') {
-        await GoogleOneTapSignIn.checkPlayServices();
-        const result = await GoogleOneTapSignIn.signIn();
-        if (isNoSavedCredentialFoundResponse(result)) {
-          const explicit = await GoogleOneTapSignIn.presentExplicitSignIn();
-          if (!isSuccessResponse(explicit)) throw new Error('Google login cancelled');
-          providerToken = explicit.data.idToken ?? '';
-        } else if (isSuccessResponse(result)) {
-          providerToken = result.data.idToken ?? '';
-        } else {
-          throw new Error('Google login failed');
+        try {
+          // Check if Google Play Services are available (Android only)
+          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+          
+          // Attempt to sign in
+          const response = await GoogleSignin.signIn();
+          
+          if (isSuccessResponse(response)) {
+            // Successfully signed in
+            const { data } = response;
+            if (data.idToken) {
+              providerToken = data.idToken;
+              // Extract email from user data if available
+              if (data.user.email && !config.email) {
+                config.email = data.user.email;
+              }
+            } else {
+              throw new Error('No ID token received from Google Sign-In');
+            }
+          } else if (isCancelledResponse(response)) {
+            // User cancelled the sign-in
+            throw new Error('Google Sign-In was cancelled');
+          } else {
+            throw new Error('Google Sign-In failed');
+          }
+        } catch (error) {
+          if (isErrorWithCode(error)) {
+            switch (error.code) {
+              case statusCodes.IN_PROGRESS:
+                throw new Error('Google Sign-In is already in progress');
+              case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                throw new Error('Google Play Services are not available or outdated');
+              default:
+                throw new Error(`Google Sign-In error: ${error.message}`);
+            }
+          } else {
+            throw error;
+          }
         }
       } else if (config.strategy === 'apple') {
         const res = await AppleAuthentication.signInAsync({
@@ -198,9 +257,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
         providerToken = res.identityToken || '';
       } else if (config.strategy === 'passkey') {
-        const cred = await Passkey.create({ challenge: 'authenticate', user: { id: 'user', name: 'interspace' } });
-        const signRes = await Passkey.sign({ credentialId: cred.id, challenge: 'authenticate' });
-        providerToken = signRes.signature;
+        // Passkey authentication - simplified for now
+        // TODO: Implement proper passkey authentication
+        throw new Error('Passkey authentication not yet implemented');
       } else if (config.strategy === 'email') {
         if (!config.verificationCode) throw new Error('Verification code required');
         providerToken = config.verificationCode;
@@ -260,11 +319,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const connectMetaMask = async () => {
-    const sdk = new MetaMaskSDK({ openDeeplink: (link: string) => {
-      // eslint-disable-next-line no-console
-      console.log('Open MetaMask link:', link);
-    }});
+    const sdk = new MetaMaskSDK({ 
+      openDeeplink: (link: string) => {
+        // eslint-disable-next-line no-console
+        console.log('Open MetaMask link:', link);
+      },
+      dappMetadata: {
+        name: 'Interspace',
+        url: 'https://interspace.app',
+      }
+    });
     const provider = sdk.getProvider();
+    if (!provider) {
+      throw new Error('MetaMask provider not available');
+    }
     const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
     const address = accounts[0];
     const message = 'Sign in to Interspace';
@@ -273,13 +341,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const connectCoinbase = async () => {
-    const coinbase = new CoinbaseWalletSDK({ appName: 'Interspace' });
-    const provider = coinbase.makeWeb3Provider('https://mainnet.infura.io/v3/', 1);
-    const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
-    const address = accounts[0];
-    const message = 'Sign in to Interspace';
-    const signature = (await provider.request({ method: 'personal_sign', params: [message, address] })) as string;
-    return { address, signature };
+    // TODO: Implement Coinbase Wallet SDK for React Native
+    // The current SDK is not compatible with React Native
+    throw new Error('Coinbase wallet connection not yet implemented for React Native');
   };
 
   const loginWithWallet = async (wallet: 'metamask' | 'coinbase' | 'rainbow', onSuccess?: () => void) => {
@@ -295,18 +359,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const loginWithWalletConnect = async (uri: string, onSuccess?: () => void) => {
-    const connector = new WalletConnect({ uri });
-    await connector.connect();
-    const address = connector.accounts[0];
-    const message = 'Sign in to Interspace';
-    const signature = await connector.signPersonalMessage([address, message]);
-    await login({ strategy: 'wallet', walletAddress: address, signature }, onSuccess);
+    // TODO: Implement WalletConnect v2 for React Native
+    // The current import is for v1 which may not be compatible
+    throw new Error('WalletConnect not yet implemented for React Native');
   };
 
   const logout = async (onComplete?: () => void): Promise<void> => {
     try {
       await apiService.logout();
     } catch {}
+    
+    // Sign out from Google if user was signed in with Google
+    try {
+      const currentUser = await GoogleSignin.getCurrentUser();
+      if (currentUser) {
+        await GoogleSignin.signOut();
+      }
+    } catch {
+      // Ignore Google sign-out errors
+    }
+    
     await clearAllAuthData();
     setUser(null);
     setAuthState('unauthenticated');
